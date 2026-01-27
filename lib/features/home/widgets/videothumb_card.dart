@@ -25,14 +25,19 @@ class VideothumbCard extends StatelessWidget{
           width: cardWidth,
           child: Column(
             children: [
-              Container(
+              ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12)
+                ) , 
+              child: Container(
                 height: thumbHeight,
                 decoration: BoxDecoration(image: DecorationImage(image: NetworkImage(thumbnailCard),
                 fit: BoxFit.cover)),
-              ),
+              )),
               Padding(padding: EdgeInsetsGeometry.all(12),
-              child: Text(title),
-              )
+              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,),
+              ),
             ],
           ),
         ),

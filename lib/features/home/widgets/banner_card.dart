@@ -3,10 +3,12 @@ import "package:flutter/material.dart";
 class BannerCard extends StatelessWidget{
 
   final String imageUrl;
+  final VoidCallback? onTap;
 
   const BannerCard ({
     super.key,
     required this.imageUrl,
+    this.onTap,
   });
 
 @override
@@ -15,6 +17,7 @@ class BannerCard extends StatelessWidget{
     var alturaBanner = alturaTela * 0.20;
     return Card(
       child: InkWell(
+        onTap: onTap,
         child: Container(
           height: alturaBanner,
           width: double.infinity,
