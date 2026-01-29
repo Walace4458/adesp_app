@@ -21,18 +21,30 @@ class TodayAgendaCard extends StatelessWidget{
       child: InkWell(
         onTap: onTap,
         child: Padding(padding: EdgeInsets.all(16),
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.calendar_today_rounded,
+              size: 26,
+              color: Theme.of(context).colorScheme.primary,
+              
+            ),
+            SizedBox(width: 12,),
+          Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: Theme.of(context).textTheme.titleMedium,),
-            SizedBox(height: 8,),
+            SizedBox(height: 6,),
             Text(dataLabel, style: Theme.of(context).textTheme.bodyMedium,),
-            SizedBox(height: 8,),
+            SizedBox(height: 4,),
             Text(eventName, style: Theme.of(context).textTheme.bodySmall,),
           ],
         ),
+          ], 
         ),
-      ),
-    );
+        ),
+        ),
+      );
   }
 }

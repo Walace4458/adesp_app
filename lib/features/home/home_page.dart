@@ -17,32 +17,27 @@ class HomePage extends StatelessWidget {
     var cardWidth = larguraTela * 0.55;
     var thumbHeight = cardWidth * 9/16;
 
+    var banners = ["https://img.youtube.com/vi/f1bjR6SEPOo/maxresdefault.jpg", "https://picsum.photos/536/354"];
     return Scaffold(
-      appBar: AppBar(
-          centerTitle: true,
-          title: Text(
-            'ADESP', style: Theme.of(context).textTheme.titleMedium,
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none_rounded),
-              onPressed: (){}
-            )
-          ],
-        ),
         body: SingleChildScrollView(
           child: Padding (padding: EdgeInsets.all(16),
            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: alturaBanner,
-                child: ListView(scrollDirection: Axis.horizontal, padding: EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  BannerCard(imageUrl: "https://img.freepik.com/fotos-gratis/silhueta-do-homem-asiatico-consideravel-orando_1150-861.jpg?semt=ais_hybrid&w=740&q=80"),
-                ],
-              )
-            ),
+                  if (banners.length == 1) Center(child: BannerCard(imageUrl: banners[0]))
+                  else SizedBox( 
+                        height: alturaBanner, 
+                        child: 
+                    ListView(
+                        scrollDirection: Axis.horizontal, 
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        children: [
+                          BannerCard(imageUrl: banners[0]),
+                          SizedBox(width: 13),
+                          BannerCard(imageUrl: banners[1]),
+                        ],
+                        ),
+                  ),
               SizedBox(height: 12,),
               VerseCard(title: "Versiculo do dia", 
                       verse: "Porque assim diz o Senhor aos homens de Judá e a Jerusalém: Preparai para vós o campo de lavoura, e não semeeis entre espinhos.", 
@@ -74,8 +69,7 @@ class HomePage extends StatelessWidget {
                       Text("Próxima programação",style: Theme.of(context).textTheme.titleMedium),
                       SizedBox(height: 12,),
                       TodayAgendaCard(title: 'Agenda', dataLabel: "Quarta • 20:00", eventName: "Quarta Profetica")
-            ],
-          ),
+        ],  ),
           ),
         ),
       );

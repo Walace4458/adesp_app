@@ -14,17 +14,26 @@ class BannerCard extends StatelessWidget{
 @override
   Widget build(BuildContext context) {
     var alturaTela = MediaQuery.of(context).size.height;
+    var larguraTela = MediaQuery.of(context).size.width;
+    var bannerWidth = larguraTela * 0.85;
     var alturaBanner = alturaTela * 0.20;
     return Card(
       child: InkWell(
         onTap: onTap,
-        child: Container(
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(12),
+            bottomLeft: Radius.circular(12),
+            bottomRight: Radius.circular(12),
+          ),
+          child: Container(
           height: alturaBanner,
-          width: double.infinity,
+          width: bannerWidth,
           decoration: BoxDecoration(image: DecorationImage(image: 
          NetworkImage(imageUrl),
          fit: BoxFit.cover,
-         ))),
+         )))),
         ),
       );
 }
