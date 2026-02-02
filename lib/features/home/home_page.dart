@@ -68,7 +68,8 @@ class HomePage extends StatelessWidget {
                       SizedBox(height: 12,),
                       Text("Próxima programação",style: Theme.of(context).textTheme.titleMedium),
                       SizedBox(height: 12,),
-                      TodayAgendaCard(title: 'Agenda', dataLabel: "Quarta • 20:00", eventName: "Quarta Profetica")
+                      TodayAgendaCard(title: 'Agenda', dataLabel: "Quarta • 20:00", eventName: "Quarta Profetica"),
+                      SizedBox(height: 90,)
         ],  ),
           ),
         ),
