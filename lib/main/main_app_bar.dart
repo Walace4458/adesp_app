@@ -1,26 +1,10 @@
 import 'package:flutter/material.dart';
-import 'home/agenda_page.dart';
-import 'home/gabinete_page.dart';
-import 'home/home_page.dart';
-import 'home/mais_page.dart';
-import 'home/midia_page.dart';
+import 'package:flutter_application_1/features/notifications/notifications_page.dart';
 
-class MainPage extends StatefulWidget {
-  const MainPage({super.key});
-
-@override
-  State<MainPage> createState() => _MainPageState ();
-}
-
-class _MainPageState extends State<MainPage>{
- int _currentIndex = 2;
-
-  final _pages = [MidiaPage(), AgendaPage(), HomePage(), GabinetePage(), MaisPage()];
-
-  AppBar _buildAppBar(BuildContext context) {
-    final bool center = _currentIndex == 2;
-    switch (_currentIndex) {
-    case 0: // Mídia
+AppBar  buildMainAppBar(BuildContext context, int currentIndex) {
+final bool center = currentIndex == 2;
+switch (currentIndex) {
+case 0: // Mídia
       return AppBar(
         centerTitle: true,
         title: Text('MÍDIA', style: Theme.of(context).textTheme.titleMedium),
@@ -64,7 +48,7 @@ class _MainPageState extends State<MainPage>{
           IconButton(
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () {
-              // depois: abrir notificações
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage()));
             },
           ),
         ],
@@ -111,48 +95,3 @@ class _MainPageState extends State<MainPage>{
       );
   }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(context),
-        body: _pages[_currentIndex],
-        bottomNavigationBar: SafeArea(
-          child: Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSecondary,
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 8),
-                    color: Colors.black.withValues(alpha: 89)
-                  )
-                ]
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: [
-          BottomNavigationBarItem(icon: Icon(Icons.ondemand_video_rounded) , label: "Mídia",),
-          BottomNavigationBarItem(icon:Icon(Icons.calendar_month_rounded), label: "Agenda" ,),
-          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.forum_rounded), label: "Gabinete"),
-          BottomNavigationBarItem(icon: Icon(Icons.menu_rounded), label: "Mais"),
-        ]
-              ),
-            ),
-            ),
-          ),
-          ),
-    );
-  }
-}
-
