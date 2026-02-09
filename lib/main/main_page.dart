@@ -16,13 +16,14 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage>{
  int _currentIndex = 2;
+ int unreadCount = 1;
 
   final _pages = [MidiaPage(), AgendaPage(), HomePage(), GabinetePage(), MaisPage()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: buildMainAppBar(context, _currentIndex),
+      appBar: buildMainAppBar(context, _currentIndex, unreadCount),
         body: _pages[_currentIndex],
         bottomNavigationBar: buildMainBottomNav(context, currentIndex: _currentIndex, onTap: (index){
           setState(() {
