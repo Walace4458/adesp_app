@@ -32,8 +32,8 @@ class ReadTab extends StatelessWidget {
         return Card(
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsPageDetails
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsPageDetails
               (title: notif.title, message: notif.message, date: notif.dateLabel)));
             },
             child: Padding(padding: const EdgeInsets.all(16),
