@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/midiapage/midia_view.dart';
+import 'package:flutter_application_1/features/midiapage/models/midia_item.dart';
+import 'package:flutter_application_1/features/midiapage/repository_video.dart';
+
 
 class MidiaPage extends StatefulWidget {
   const MidiaPage({super.key});
@@ -9,22 +13,20 @@ class MidiaPage extends StatefulWidget {
 
 class _MidiaPageState extends State<MidiaPage> {
   bool isLoading = true;
-  List<String> videos = [];
+  List<MidiaItem> videos = [];
+
+  final _repo = RepositoryVideo();
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
-    loadVideos();
+    _loadVideos();
   }
 
-  void loadVideos() async{ 
-    await Future.delayed(const Duration(seconds: 2));
-
+  Future<void> _loadVideos() async {
+    final result = await _repo.fetchVideos();
     setState(() {
-      videos = [
-        "Culto Domingo - Mensagem Poderosa",
-        "Louvor Especial - Noite de Adoração",
-      ];
+      videos = result;
       isLoading = false;
     });
   }
@@ -32,31 +34,10 @@ class _MidiaPageState extends State<MidiaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Builder(builder: (context) {
-        if (isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-        if (videos.isEmpty) {
-          return const Center(
-            child: Text("Nenhum vídeo disponível"),
-          );
-        }
-        return ListView.builder(padding: const EdgeInsets.all(16),
-        itemCount: videos.length,
-        itemBuilder: (context, index) {
-          return Card(
-            child: Padding(padding: const EdgeInsets.all(16),
-            child: Text(
-              videos[index],
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            ),
-          );
-        }
-        );
-      }),
+      body: MidiaView(
+        isLoading: isLoading,
+        videos: videos,
+      ),
     );
   }
 }
