@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/midiapage/midia_page.dart';
 import 'package:flutter_application_1/features/notifications/notifications_page.dart';
 
-AppBar  buildMainAppBar(BuildContext context, int currentIndex, int unreadCount) {
+AppBar  buildMainAppBar(BuildContext context, int currentIndex, int unreadCount, {
+  ValueChanged<MidiaFilter>? onMidiaFilterSelected,
+}) {
 final bool center = currentIndex == 2;
 switch (currentIndex) {
 case 0: // Mídia
@@ -9,18 +12,17 @@ case 0: // Mídia
         centerTitle: true,
         title: Text('MÍDIA', style: Theme.of(context).textTheme.titleMedium),
         actions: [
-          PopupMenuButton<String>(
+          PopupMenuButton<MidiaFilter>(
             icon: const Icon(Icons.tune_rounded),
             onSelected: (value) {
-              // aqui depois você liga com backend/filtro real
-              // por enquanto só teste/print
-              // ignore: avoid_print
-              print('Filtro Mídia: $value');
+              onMidiaFilterSelected?.call(value);
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'recentes', child: Text('Recentes')),
-              PopupMenuItem(value: 'populares', child: Text('Populares')),
-              PopupMenuItem(value: 'ao_vivo', child: Text('Ao vivo')),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: MidiaFilter.all, child: Text('Todos')),
+              const PopupMenuItem(value: MidiaFilter.recents, child: Text('Recentes')),
+              const PopupMenuItem(value: MidiaFilter.featured, child: Text('Destaques')),
+              const PopupMenuItem(value: MidiaFilter.popular, child: Text('Populares')),
+              const PopupMenuItem(value: MidiaFilter.continueWatching, child: Text('Continuar assistindo')),
             ],
           ),
         ],

@@ -25,10 +25,10 @@ class MidiaCard extends StatelessWidget {
         width = 250;
         break;
       case MidiaCardVariant.normal:
-        width = 210;
+        width = 196;
         break;
       case MidiaCardVariant.compact:
-        width = 180;
+        width = 160;
         break;
     }
 
@@ -56,14 +56,14 @@ class MidiaCard extends StatelessWidget {
 
               // Texto
               Padding(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       item.title,
                       style: Theme.of(context).textTheme.titleSmall,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),

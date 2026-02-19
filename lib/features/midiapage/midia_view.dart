@@ -33,7 +33,7 @@ class MidiaView extends StatelessWidget {
     final featured = _byTag(MidiaTag.featured);
     final popular = _byTag(MidiaTag.popular);
     final continueWatching = _byTag(MidiaTag.continueWatching);
-    final recents = videos;
+    final recents = videos; // todos são “recentes”
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
@@ -77,7 +77,7 @@ class _Section extends StatelessWidget {
   final String title;
   final double height;
   final List<MidiaItem> items;
- final MidiaCardVariant cardVariant;
+  final MidiaCardVariant cardVariant;
 
   const _Section({
     required this.title,
@@ -101,7 +101,6 @@ class _Section extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final item = items[index];
-
               return MidiaCard(
                 item: item,
                 variant: cardVariant,
