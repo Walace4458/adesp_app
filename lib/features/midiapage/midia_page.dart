@@ -65,6 +65,7 @@ class _MidiaPageState extends State<MidiaPage> {
         body: MidiaView(
           isLoading: true,
           videos: const [],
+          filter: widget.filter,
         ),
       );
     }
@@ -87,6 +88,7 @@ class _MidiaPageState extends State<MidiaPage> {
       body: MidiaView(
         isLoading: false,
         videos: filtered,
+        filter: widget.filter,
       ),
     );
   }

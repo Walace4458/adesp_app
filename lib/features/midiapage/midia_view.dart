@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/midiapage/midia_page.dart';
 import 'package:flutter_application_1/features/midiapage/models/midia_item.dart';
 import 'package:flutter_application_1/features/midiapage/widget/midia_card.dart';
 import 'package:flutter_application_1/features/notifications/models/empty_state.dart';
+import 'package:flutter_application_1/features/midiapage/models/midia_details_page.dart';
 
 class MidiaView extends StatelessWidget {
   final bool isLoading;
   final List<MidiaItem> videos;
+  final MidiaFilter filter;
 
   const MidiaView({
     super.key,
     required this.isLoading,
     required this.videos,
+    required this.filter,
   });
 
   List<MidiaItem> _byTag(MidiaTag tag) =>
@@ -29,6 +33,51 @@ class MidiaView extends StatelessWidget {
         subtitle: 'Quando a igreja publicar algo novo, vai aparecer aqui.',
       );
     }
+
+    if (filter !=MidiaFilter.all) {
+      String title = "Adicionados recentemente";
+      MidiaCardVariant variant = MidiaCardVariant.compact;
+      double height = 150;
+
+      switch (filter){
+        case MidiaFilter.recents:
+        title="Adicionados recentemente";
+        variant = MidiaCardVariant.compact;
+        height = 150;
+        break;
+
+        case MidiaFilter.featured:
+        title = "Videos em destaque";
+        variant = MidiaCardVariant.featured;
+        height = 210;
+        break;
+        
+        case MidiaFilter.popular:
+        title = "Populares";
+        variant = MidiaCardVariant.normal;
+        height = 170;
+        break;
+
+        case MidiaFilter.continueWatching:
+        title = "Continuar assistindo";
+        variant = MidiaCardVariant.normal;
+        height = 170;
+        break;
+
+        case MidiaFilter.all:
+        break;
+      }
+
+      return ListView (
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+        children: [
+          _Section(title: title, height: height, items: videos, cardVariant: variant,)
+        ],
+      );
+    }
+
+    List<MidiaItem>byTag(MidiaTag tag) =>
+      videos.where((v) => v.tags.contains(tag)).toList();
 
     final featured = _byTag(MidiaTag.featured);
     final popular = _byTag(MidiaTag.popular);
@@ -104,6 +153,9 @@ class _Section extends StatelessWidget {
               return MidiaCard(
                 item: item,
                 variant: cardVariant,
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_)=> MidiaDetailsPage(item: item)));
+                },
               );
             },
           ),
