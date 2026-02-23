@@ -11,6 +11,7 @@ class RepositoryVideo {
         thumbnail: 'https://img.youtube.com/vi/4WnieZDA-Vg/maxresdefault.jpg',
         subtitle: 'Video Culto',
         tags: {MidiaTag.featured},
+        youtubeVideoId: '4WnieZDA-Vg'
       ),
       MidiaItem(
         id: '2',
@@ -18,6 +19,7 @@ class RepositoryVideo {
         thumbnail: 'https://picsum.photos/536/354',
         subtitle: 'Video Evento',
         tags: {MidiaTag.featured, MidiaTag.popular},
+        youtubeVideoId: 'W-xU4XnsDB8'
       ),
       MidiaItem(
         id: '3',
@@ -25,6 +27,7 @@ class RepositoryVideo {
         thumbnail: 'https://picsum.photos/536/354',
         subtitle: 'Video naipe',
         tags: {MidiaTag.featured, MidiaTag.popular},
+        youtubeVideoId: 'QSXpy49xLH4'
       ),
     ];
   }

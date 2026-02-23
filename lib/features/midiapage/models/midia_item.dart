@@ -5,6 +5,7 @@ class MidiaItem  {
   final String subtitle;
   final String thumbnail;
   final Set<MidiaTag> tags;
+  final String youtubeVideoId;
 
   const MidiaItem({
     required this.id,
@@ -12,6 +13,7 @@ class MidiaItem  {
     required this.thumbnail,
     required this.subtitle,
     required this.tags,
+    required this.youtubeVideoId,
   });
 }
 
