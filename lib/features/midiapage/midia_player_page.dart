@@ -3,6 +3,8 @@ import 'package:flutter_application_1/features/midiapage/models/midia_item.dart'
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'midia_player_view.dart'; // ajuste o caminho conforme sua pasta
+
 class MidiaPlayerPage extends StatefulWidget {
   final MidiaItem item;
 
@@ -16,146 +18,85 @@ class MidiaPlayerPage extends StatefulWidget {
 }
 
 class _MidiaPlayerPageState extends State<MidiaPlayerPage> {
- bool _isPlaying = false;
+  bool _isPlaying = false;
+  late final YoutubePlayerController _controller;
 
-Future<void> _onShare() async {
-  final url = 'https://www.youtube.com/watch?v=${widget.item.youtubeVideoId}';
+  bool get _hasDashInId => widget.item.youtubeVideoId.contains('-');
 
-  await SharePlus.instance.share(
-    ShareParams(
-      text: 'Assista: $url',
-    ),
-  );
-}
+  Future<void> _startVideoWithFallback() async {
+  final id = widget.item.youtubeVideoId;
 
+  // garante que o player já foi montado no widget tree
+  await WidgetsBinding.instance.endOfFrame;
 
- late final YoutubePlayerController _controller;
- @override
- void initState() {
-  super.initState();
-  _controller = YoutubePlayerController.fromVideoId(
-    videoId: widget.item.youtubeVideoId,
-    autoPlay: true,
-    params: const YoutubePlayerParams(
-      showFullscreenButton: true,
-      showControls: true,
-      playsInline: true,
-    ),
-    );
- }
+  if (_hasDashInId) {
+    // força o carregamento do vídeo pelo ID antes de tocar
+    await _controller.cueVideoById(videoId: id);
+  }
 
- @override
-void dispose(){
-  _controller.close();
-  super.dispose();
+  await _controller.playVideo();
 }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Player'),
+  void initState() {
+    super.initState();
+    _controller = YoutubePlayerController.fromVideoId(
+      videoId: widget.item.youtubeVideoId,
+      autoPlay: false, // <- importante quando você começa mostrando preview
+      params: const YoutubePlayerParams(
+        showFullscreenButton: true,
+        showControls: true,
+        playsInline: true,
+        enableJavaScript: true,
+        origin: 'https://www.youtube-nocookie.com',
       ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: _isPlaying
-                    ? YoutubePlayer(
-                      controller: _controller,
-                    ):
-                  Stack (
-                    children: [
-                      Image.network(
-                        widget.item.thumbnail,
-                        fit: BoxFit.cover,
-                      ),
-                      Positioned.fill(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black54,
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned.fill(
-                        child: Center(
-                          child: IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _isPlaying = true;
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.play_circle_fill_rounded,
-                              color: Colors.white,
-                            ),
-                            iconSize: 72,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+    );
+  }
 
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: [
-                  Text(
-                    widget.item.title,
-                    style: Theme.of(context).textTheme.titleMedium
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.item.subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            if (!_isPlaying) {
-                              setState(() => _isPlaying = true);
-                            }
-                            _controller.enterFullScreen();
-                          },
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: const Text('Assisitr'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _onShare,
-                          icon: const Icon(Icons.share_rounded),
-                          label: const Text('Compartilhar'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+  @override
+  void dispose() {
+    _controller.close();
+    super.dispose();
+  }
+
+void _handlePlay() {
+  if (_isPlaying) return;
+  setState(() => _isPlaying = true);
+  _startVideoWithFallback();
+}
+
+void _handleWatch() {
+  if (!_isPlaying) {
+    setState(() => _isPlaying = true);
+    _startVideoWithFallback();
+  }
+  _controller.enterFullScreen();
+}
+
+  Future<void> _onShare() async {
+    final url = 'https://www.youtube.com/watch?v=${widget.item.youtubeVideoId}';
+    await SharePlus.instance.share(
+      ShareParams(text: 'Assista: $url'),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return YoutubePlayerScaffold(
+      controller: _controller,
+      // não coloque aspectRatio aqui porque sua View já usa AspectRatio(16/9)
+      builder: (context, player) {
+        return MidiaPlayerView(
+          isPlaying: _isPlaying,
+          thumbnailUrl: widget.item.thumbnail,
+          player: player, // <- vem pronto do scaffold
+          onPlay: _handlePlay,
+          onWatch: _handleWatch,
+          onShare: _onShare,
+          title: widget.item.title,
+          subtitle: widget.item.subtitle,
+        );
+      },
     );
   }
 }
