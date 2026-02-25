@@ -11,7 +11,7 @@ class RepositoryVideo {
         thumbnail: 'https://img.youtube.com/vi/4WnieZDA-Vg/maxresdefault.jpg',
         subtitle: 'Video Culto',
         tags: {MidiaTag.featured},
-        youtubeVideoId: 'dQw4w9WgXcQ'
+        youtubeVideoId: '4WnieZDA-Vg'
       ),
       MidiaItem(
         id: '2',
