@@ -1,48 +1,50 @@
 import 'package:flutter_application_1/features/agenda/models/agenda_event.dart';
 import 'agenda_repository.dart';
 
-class MockAgendaRepository implements AgendaRepository{
-  
+class MockAgendaRepository implements AgendaRepository {
   @override
-  Future<List<AgendaEvent>> fetchEvents() async {
+  Future<List<AgendaEvent>> fetchEventsInRange(
+    DateTime start,
+    DateTime endExclusive,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 700));
 
     final now = DateTime.now();
 
     DateTime at(int daysFromNow, int hour, int minute) {
-      final base = DateTime(now.year, now.month, now.day).add(Duration(days: daysFromNow));
+      final base = DateTime(now.year, now.month, now.day)
+          .add(Duration(days: daysFromNow));
       return DateTime(base.year, base.month, base.day, hour, minute);
     }
 
-
-    return [
+    final all = <AgendaEvent>[
       AgendaEvent(
-        id: 'e1', 
-        title: 'Conferência de Avivamento', 
-        startAt: at(2,19,30), 
-        location: 'ADESP - Sede', 
-        description: 'Uma noite especial de louvor e palavra', 
+        id: 'e1',
+        title: 'Conferência de Avivamento',
+        startAt: at(2, 19, 30),
+        location: 'ADESP - Sede',
+        description: 'Uma noite especial de louvor e palavra',
         category: AgendaCategory.evento,
         isFeatured: true,
         bannerUrl: null,
-        ),
-        AgendaEvent(
-        id: 'e2', 
-        title: 'Culto da Família', 
-        startAt: at(0, 19, 0), 
-        location: 'ADESP - Sede', 
-        description: 'Traga sua família e venha adorar com a gente', 
+      ),
+      AgendaEvent(
+        id: 'e2',
+        title: 'Culto da Família',
+        startAt: at(0, 19, 0),
+        location: 'ADESP - Sede',
+        description: 'Traga sua família e venha adorar com a gente',
         category: AgendaCategory.culto,
         isFeatured: true,
-        ),
-        AgendaEvent(
-        id: 'e3', 
-        title: 'Célula - Zona Norte', 
-        startAt: at(1, 20, 0), 
-        location: 'Casa do Irmão João', 
-        description: 'Comunhão, palavra e oração', 
+      ),
+      AgendaEvent(
+        id: 'e3',
+        title: 'Célula - Zona Norte',
+        startAt: at(1, 20, 0),
+        location: 'Casa do Irmão João',
+        description: 'Comunhão, palavra e oração',
         category: AgendaCategory.celula,
-        ),
+      ),
       AgendaEvent(
         id: 'e4',
         title: 'Jovens - Quarta Profética',
@@ -68,5 +70,13 @@ class MockAgendaRepository implements AgendaRepository{
         category: AgendaCategory.culto,
       ),
     ];
+
+    final filtered = all.where((e) {
+      final t = e.startAt;
+      return !t.isBefore(start) && t.isBefore(endExclusive);
+    }).toList()
+      ..sort((a, b) => a.startAt.compareTo(b.startAt));
+
+    return filtered;
   }
 }

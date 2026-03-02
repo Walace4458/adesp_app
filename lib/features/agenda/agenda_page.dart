@@ -4,8 +4,9 @@ import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_application_1/features/agenda/data/agenda_repository.dart';
 import 'package:flutter_application_1/features/agenda/data/mock_agenda_repository.dart';
 import 'package:flutter_application_1/features/agenda/models/agenda_event.dart';
+import 'package:flutter_application_1/features/agenda/ui/sheets/agenda_month_sheet.dart';
+import 'package:flutter_application_1/features/agenda/ui/sheets/agenda_event_datails_sheet.dart';
 
-// >>> IMPORTS NOVOS (ajuste o caminho se precisar)
 import 'package:flutter_application_1/features/agenda/service/agenda_interest_service.dart';
 import 'package:flutter_application_1/features/agenda/service/agenda_interest_store.dart';
 
@@ -18,7 +19,24 @@ class AgendaPage extends StatefulWidget {
 
 class _AgendaPageState extends State<AgendaPage> {
   final AgendaRepository _repo = MockAgendaRepository();
-  late Future<List<AgendaEvent>> _future;
+
+  final Set<String> _confirmedIds = <String>{};
+
+void _openDetails(AgendaEvent e) {
+  AgendaEventDetailsSheet.show(
+    context,
+    event: e,
+    isConfirmed: _confirmedIds.contains(e.id),
+    onPresenceConfirmed: () {
+      setState(() => _confirmedIds.add(e.id));
+      _snack('Presença confirmada!');
+    },
+  );
+}
+
+  // ✅ agora buscamos por RANGE (sem fetchEvents)
+  late Future<List<AgendaEvent>> _futureWeek;
+  late Future<List<AgendaEvent>> _futureFeaturedBase;
 
   int _weekOffset = 0; // 0 semana atual, -1 passada, +1 próxima
 
@@ -32,7 +50,8 @@ class _AgendaPageState extends State<AgendaPage> {
   @override
   void initState() {
     super.initState();
-    _future = _repo.fetchEvents();
+
+    _loadFutures();
 
     _interestStore.load().then((ids) {
       if (!mounted) return;
@@ -43,15 +62,43 @@ class _AgendaPageState extends State<AgendaPage> {
     });
   }
 
+  // ✅ centraliza as chamadas ao repo
+  void _loadFutures() {
+    final now = DateTime.now();
+
+    final weekStart =
+        _startOfWeekSunday(now).add(Duration(days: 7 * _weekOffset));
+    final weekEndExclusive = _endOfWeekExclusive(weekStart);
+
+    // Base para "Em destaque" + MonthSheet (ajuste se quiser)
+    final featuredStart = DateTime(now.year, now.month, now.day);
+    final featuredEndExclusive = featuredStart.add(const Duration(days: 180));
+
+    _futureWeek = _repo.fetchEventsInRange(weekStart, weekEndExclusive);
+    _futureFeaturedBase =
+        _repo.fetchEventsInRange(featuredStart, featuredEndExclusive);
+  }
+
   void _reload() {
     setState(() {
-      _future = _repo.fetchEvents();
+      _loadFutures();
     });
   }
 
-  void _goPrevWeek() => setState(() => _weekOffset -= 1);
-  void _goNextWeek() => setState(() => _weekOffset += 1);
-  void _goThisWeek() => setState(() => _weekOffset = 0);
+  void _goPrevWeek() => setState(() {
+        _weekOffset -= 1;
+        _loadFutures();
+      });
+
+  void _goNextWeek() => setState(() {
+        _weekOffset += 1;
+        _loadFutures();
+      });
+
+  void _goThisWeek() => setState(() {
+        _weekOffset = 0;
+        _loadFutures();
+      });
 
   // ---- helpers sem withOpacity (usa alpha)
   Color _alpha(Color c, double opacity) {
@@ -70,19 +117,7 @@ class _AgendaPageState extends State<AgendaPage> {
     return startOfWeek.add(const Duration(days: 7));
   }
 
-  List<AgendaEvent> _eventsInRange(
-    List<AgendaEvent> all,
-    DateTime start,
-    DateTime endExclusive,
-  ) {
-    final filtered = all.where((e) {
-      return !e.startAt.isBefore(start) && e.startAt.isBefore(endExclusive);
-    }).toList();
-
-    filtered.sort((a, b) => a.startAt.compareTo(b.startAt));
-    return filtered;
-  }
-
+  // ✅ não precisa mais do _eventsInRange (o repo já entrega filtrado por semana)
   List<AgendaEvent> _featured(List<AgendaEvent> all) {
     final f = all.where((e) => e.isFeatured).toList();
     f.sort((a, b) => a.startAt.compareTo(b.startAt));
@@ -112,8 +147,18 @@ class _AgendaPageState extends State<AgendaPage> {
 
   String _monthShortPt(int month) {
     const m = [
-      'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-      'jul', 'ago', 'set', 'out', 'nov', 'dez'
+      'jan',
+      'fev',
+      'mar',
+      'abr',
+      'mai',
+      'jun',
+      'jul',
+      'ago',
+      'set',
+      'out',
+      'nov',
+      'dez'
     ];
     return m[month - 1];
   }
@@ -215,17 +260,26 @@ class _AgendaPageState extends State<AgendaPage> {
     final baseWeekEndInclusive =
         baseWeekEndExclusive.subtract(const Duration(days: 1));
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Agenda')),
-      body: FutureBuilder<List<AgendaEvent>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    // ✅ tipado corretamente
+    final combinedFuture = Future.wait<List<AgendaEvent>>([
+      _futureWeek,
+      _futureFeaturedBase,
+    ]);
 
-          if (snapshot.hasError) {
-            return Center(
+    return FutureBuilder<List<List<AgendaEvent>>>(
+      future: combinedFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return  Scaffold(
+            appBar: AppBar(title: Text('Agenda')),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: Text('Agenda')),
+            body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -240,15 +294,46 @@ class _AgendaPageState extends State<AgendaPage> {
                   ],
                 ),
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          final all = snapshot.data ?? const <AgendaEvent>[];
-          final featured = _featured(all);
-          final weekEvents =
-              _eventsInRange(all, baseWeekStart, baseWeekEndExclusive);
+        final weekEvents = (snapshot.data?[0] ?? const <AgendaEvent>[]);
+        final featuredBase = (snapshot.data?[1] ?? const <AgendaEvent>[]);
+        final featured = _featured(featuredBase);
 
-          return RefreshIndicator(
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Agenda'),
+            actions: [
+              IconButton(
+                tooltip: 'Calendário do mês',
+                icon: const Icon(Icons.calendar_month_rounded),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: ColorStyle.fundoPrincipal,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(18)),
+                    ),
+                    builder: (_) {
+                      return AgendaMonthSheet(
+                        // ✅ agora não temos "all" global, então passamos a base
+                        allEvents: featuredBase,
+                        onEventTap: (event) {
+                          Navigator.pop(context);
+                          _openDetails(event);
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
             onRefresh: () async => _reload(),
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -273,11 +358,9 @@ class _AgendaPageState extends State<AgendaPage> {
                               '${_dowShortPt(e.startAt)} • ${_formatDayMonth(e.startAt)} • ${_formatTime(e.startAt)}',
                           location: e.location,
                           category: _categoryLabel(e.category),
-
                           isInterested: liked,
                           onHeartTap: () => _toggleInterest(e.id),
-
-                          onTap: () => _snack('Abrir detalhes: ${e.title}'),
+                          onTap: () => _openDetails(e),
                         );
                       },
                     ),
@@ -333,22 +416,23 @@ class _AgendaPageState extends State<AgendaPage> {
                         category: _categoryLabel(e.category),
                         bg: _alpha(ColorStyle.fundoSuperficie, 0.60),
                         border: _alpha(ColorStyle.textoSecundario, 0.18),
-
                         isInterested: liked,
                         onHeartTap: () => _toggleInterest(e.id),
-
-                        onTap: () => _snack('Abrir detalhes: ${e.title}'),
+                        onTap: () => _openDetails(e),
+                        isConfirmed: _confirmedIds.contains(e.id),
                       ),
                     );
                   }),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
+
+// ======= resto do arquivo (cards/chips/empty) fica IGUAL ao seu =======
 
 class _FeaturedCard extends StatelessWidget {
   final String title;
@@ -483,6 +567,7 @@ class _WeekEventCard extends StatelessWidget {
   final Color border;
 
   final bool isInterested;
+  final bool isConfirmed;
   final VoidCallback onHeartTap;
 
   final VoidCallback onTap;
@@ -499,6 +584,7 @@ class _WeekEventCard extends StatelessWidget {
     required this.isInterested,
     required this.onHeartTap,
     required this.onTap,
+    required this.isConfirmed
   });
 
   @override
@@ -530,6 +616,31 @@ class _WeekEventCard extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                       ),
+                  if (isConfirmed)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.verified_rounded,
+                        color: ColorStyle.principal,
+                        size: 20,
+                      ),
+                    ),
+                      IconButton(
+                            onPressed: onHeartTap,
+                            icon: Icon(
+                              isInterested
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isInterested
+                                  ? ColorStyle.principal
+                                  : ColorStyle.textoSecundario,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: ColorStyle.textoSecundario,
+                          ),
                       const SizedBox(height: 4),
                       Text(
                         day,
