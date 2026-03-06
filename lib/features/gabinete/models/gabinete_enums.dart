@@ -7,7 +7,7 @@ enum GabineteUserRole {
 enum GabineteRequestStatus {
   pendingAdminApproval,
   confirmed,
-  canceled,
+  cancelled,
   completed,
   expired,
 }

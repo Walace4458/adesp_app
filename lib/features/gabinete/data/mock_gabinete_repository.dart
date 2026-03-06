@@ -269,7 +269,7 @@ class MockGabineteRepository implements GabineteRepository {
     bool allowed = false;
     if (newStatus == GabineteRequestStatus.confirmed) {
       allowed = current == GabineteRequestStatus.pendingAdminApproval;
-    } else if (newStatus == GabineteRequestStatus.canceled) {
+    } else if (newStatus == GabineteRequestStatus.cancelled) {
       allowed = current == GabineteRequestStatus.pendingAdminApproval ||
           current == GabineteRequestStatus.confirmed;
     } else if (newStatus == GabineteRequestStatus.completed) {
@@ -289,7 +289,7 @@ class MockGabineteRepository implements GabineteRepository {
       updatedAt: now,
       lastAdminActorUserId: adminUserId,
       confirmedAt: newStatus == GabineteRequestStatus.confirmed ? now : req.confirmedAt,
-      canceledAt: newStatus == GabineteRequestStatus.canceled ? now : req.canceledAt,
+      canceledAt: newStatus == GabineteRequestStatus.cancelled ? now : req.canceledAt,
       completedAt: newStatus == GabineteRequestStatus.completed ? now : req.completedAt,
     );
 

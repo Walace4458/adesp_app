@@ -5,6 +5,8 @@ import '../models/gabinete_enums.dart';
 import '../models/gabinete_slot.dart';
 import '../service/gabinete_slot_hold_service.dart';
 import 'gabinete_state.dart';
+import '../domain/gabinete_request_validator.dart';
+import '../domain/gabinete_rules.dart';
 
 class GabineteController extends ChangeNotifier {
   final GabineteRepository repo;
@@ -76,6 +78,28 @@ class GabineteController extends ChangeNotifier {
     return slots;
   }
 
+  bool isDayAllowed(DateTime day) {
+    return GabineteRules.allowedWeekdays.contains(day.weekday);
+  }
+
+  bool isTooFarInFuture(DateTime day) {
+    final now = DateTime.now();
+    final maxDate = now.add(
+      const Duration(days: GabineteRules.maxDaysInFuture),
+    );
+
+    return day.isAfter(maxDate);
+  }
+
+  bool hasReachedUserLimit(String userId) {
+    final active = _state.myRequests.where((r) {
+      return r.status == GabineteRequestStatus.pendingAdminApproval ||
+            r.status == GabineteRequestStatus.confirmed;
+    }).length;
+
+    return active >= GabineteRules.maxActiveRequestsPerUser;
+  }
+
   bool isSlotBlockedByRangeRequests(String slotKey) {
     return _state.rangeRequests.any((r) {
       final blockedStatus =
@@ -103,7 +127,33 @@ Future<void> holdSlot({
 }) async {
   clearError();
 
-  // ✅ Novo: bloqueia slots no passado
+  if (!isDayAllowed(slot.start)) {
+    _setState(
+      _state.copyWith(
+        errorMessage: 'Não há gabinete nesse dia'
+      ),
+    );
+    return;
+  }
+
+  if (isTooFarInFuture(slot.start)) {
+    _setState(
+      _state.copyWith(
+        errorMessage: 'Não é possível agendar tão distante',
+      ),
+    );
+    return;
+  }
+
+  if (hasReachedUserLimit(userId)) {
+    _setState(
+      _state.copyWith(
+        errorMessage: 'Você já possui atendimentos agendados.'
+      ),
+    );
+    return;
+  }
+
   if (isSlotInPast(slot)) {
     _setState(_state.copyWith(errorMessage: 'Não é possível agendar em dias/horários passados.'));
     return;
@@ -123,47 +173,84 @@ Future<void> holdSlot({
   // =========================
   // Criar request consumindo hold
   // =========================
-  Future<void> submitRequest({
-    required String userId,
-    required String categoryId,
-    required String name,
-    required String whatsapp,
-    required String? note,
-  }) async {
-    clearError();
+Future<void> submitRequest({
+  required String userId,
+  required String categoryId,
+  required String name,
+  required String whatsapp,
+  required String? note,
+}) async {
+  clearError();
 
-    final hold = holdService.currentHold;
-    if (hold == null) {
-      _setState(
-        _state.copyWith(
-          errorMessage: 'Seu horário expirou. Selecione novamente.',
-        ),
-      );
-      return;
-    }
+  final hold = holdService.currentHold;
 
-    try {
-      final req = await repo.createRequestFromHold(
-        holdId: hold.id.value,
-        userId: userId,
-        categoryId: categoryId,
-        memberName: name,
-        whatsapp: whatsapp,
-        note: note,
-      );
-
-      // Atualiza "meus pedidos" (otimista)
-      final updatedMy = [req, ..._state.myRequests];
-      _setState(_state.copyWith(myRequests: updatedMy));
-
-      // Reload do range (pra bloquear imediatamente no calendário)
-      final dayStart = DateTime(req.slot.start.year, req.slot.start.month, req.slot.start.day);
-      await loadRange(dayStart, dayStart.add(const Duration(days: 1)));
-    } catch (e) {
-      _setState(_state.copyWith(errorMessage: e.toString()));
-    }
+  if (hold == null) {
+    _setState(
+      _state.copyWith(
+        errorMessage: 'Seu horário expirou. Selecione novamente.',
+      ),
+    );
+    return;
   }
 
+  // =========================
+  // VALIDAÇÃO DE DOMÍNIO
+  // =========================
+  final validation = GabineteRequestValidator.validateRequest(
+    name: name,
+    whatsapp: whatsapp,
+    categoryId: categoryId,
+    note: note ?? '',
+  );
+
+  if (!validation.sucess) {
+    _setState(
+      _state.copyWith(errorMessage: validation.error),
+    );
+    return;
+  }
+
+  // =========================
+  // NORMALIZAÇÃO DOS DADOS
+  // =========================
+  final normalizedName =
+      GabineteRequestValidator.normalizeName(name);
+
+  final normalizedWhatsapp =
+      GabineteRequestValidator.normalizeWhatsapp(whatsapp);
+
+  try {
+    final req = await repo.createRequestFromHold(
+      holdId: hold.id.value,
+      userId: userId,
+      categoryId: categoryId,
+      memberName: normalizedName,
+      whatsapp: normalizedWhatsapp,
+      note: note,
+    );
+
+    // Atualiza "meus pedidos"
+    final updatedMy = [req, ..._state.myRequests];
+
+    _setState(_state.copyWith(myRequests: updatedMy));
+
+    // Reload do range (pra bloquear imediatamente no calendário)
+    final dayStart = DateTime(
+      req.slot.start.year,
+      req.slot.start.month,
+      req.slot.start.day,
+    );
+
+    await loadRange(
+      dayStart,
+      dayStart.add(const Duration(days: 1)),
+    );
+  } catch (e) {
+    _setState(
+      _state.copyWith(errorMessage: e.toString()),
+    );
+  }
+}
   // =============
   // Listagens
   // =============

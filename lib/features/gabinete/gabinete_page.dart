@@ -271,7 +271,7 @@ class _GabinetePageState extends State<GabinetePage> {
                         child: Text('Admin: Confirmar'),
                       ),
                       PopupMenuItem(
-                        value: GabineteRequestStatus.canceled,
+                        value: GabineteRequestStatus.cancelled,
                         child: Text('Admin: Cancelar'),
                       ),
                       PopupMenuItem(
