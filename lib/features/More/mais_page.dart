@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/More/features/bible/ui/bible_books_page.dart';
+import 'package:flutter_application_1/features/More/features/bible/ui/weekly_reading_page.dart';
+
 
 import '../More/models/more_option.dart';
 import '../More/ui/pages/widgets/more_option_tile.dart';
 
 import '../More/ui/pages/profile_page.dart';
-import '../More/ui/pages/bible_page.dart';
 import '../More/ui/pages/prayer_requests_page.dart';
 import '../More/ui/pages/testimonies_page.dart';
 import '../More/ui/pages/contact_page.dart';
@@ -31,13 +33,19 @@ class MaisPage extends StatelessWidget{
       MoreOption(
         title: "Bíblia",
         icon: Icons.menu_book_rounded,
-        page: const BiblePage(),
+        page: BibleBooksPage(),
       ),
 
       MoreOption(
         title: "Pedidos de oração",
         icon: Icons.volunteer_activism_rounded,
         page: const PrayerRequestsPage(),
+      ),
+
+      MoreOption(
+        title: "Leitura da Semana",
+        icon: Icons.menu_book_rounded,
+        page: const WeeklyReadingPage(),
       ),
 
       MoreOption(
