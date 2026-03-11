@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_books_page.dart';
+import 'package:flutter_application_1/features/More/features/bible/ui/bible_favorites_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/weekly_reading_page.dart';
 
 
@@ -37,6 +38,12 @@ class MaisPage extends StatelessWidget{
       ),
 
       MoreOption(
+        title: "Versículos Favoritos",
+        icon: Icons.star_border_rounded,
+        page: BibleFavoritesPage(),
+      ),
+
+      MoreOption(
         title: "Pedidos de oração",
         icon: Icons.volunteer_activism_rounded,
         page: const PrayerRequestsPage(),
@@ -62,9 +69,6 @@ class MaisPage extends StatelessWidget{
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Mais Opções"),
-      ),
       body: ListView.separated(
           separatorBuilder: (_, __) => const Divider(), 
           itemCount: options.length,

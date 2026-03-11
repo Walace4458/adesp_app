@@ -1,12 +1,11 @@
 class BibleBook {
   final String name;
-  final String apiName;
   final int chapters;
+  final int index;
 
   BibleBook ({
     required this.name,
-    required this.apiName,
     required this.chapters,
+    required this.index
   });
 }
-
