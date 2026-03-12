@@ -11,7 +11,7 @@ class BibleLocalService {
     }
 
     final jsonString = 
-    await rootBundle.loadString('lib/assets/bible/bible.json');
+    await rootBundle.loadString('assets/bible/bible.json');
 
     _bibleCache = jsonDecode(jsonString);
     return _bibleCache!;
@@ -31,5 +31,15 @@ class BibleLocalService {
     final bible = await _loadBible();
 
     return bible[bookIndex]["chapters"].length;
+  }
+    Future<String> getVerse(
+    int bookIndex,
+    int chapterIndex,
+    int verseIndex,
+  ) async {
+
+    final verses = await getVerses(bookIndex, chapterIndex);
+
+    return verses[verseIndex];
   }
 }

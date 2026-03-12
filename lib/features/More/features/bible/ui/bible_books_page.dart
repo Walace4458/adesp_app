@@ -9,20 +9,15 @@ class BibleBooksPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final booksService = BibleBooksService();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Bíblia"),
       ),
-
       body: FutureBuilder<List<BibleBook>>(
-
         future: booksService.loadBooks(),
-
         builder: (context, snapshot) {
-
           if (!snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(),
@@ -31,26 +26,68 @@ class BibleBooksPage extends StatelessWidget {
 
           final books = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: books.length,
-            itemBuilder: (context, index) {
+          final oldTestament = books.sublist(0, 39);
+          final newTestament = books.sublist(39);
 
-              final BibleBook book = books[index];
+          return ListView(
+            children: [
 
-              return ListTile(
-                title: Text(book.name),
-                trailing: const Icon(Icons.arrow_forward_rounded),
+              /// VELHO TESTAMENTO
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+                child: Text(
+                  "Velho Testamento",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
 
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BibleChaptersPage(book: book),
-                    ),
-                  );
-                },
-              );
-            },
+              const Divider(thickness: 1),
+
+              ...oldTestament.map((book) {
+                return ListTile(
+                  title: Text(book.name),
+                  trailing: const Icon(Icons.arrow_forward_rounded),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BibleChaptersPage(book: book),
+                      ),
+                    );
+                  },
+                );
+              }),
+
+              /// NOVO TESTAMENTO
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 10),
+                child: Text(
+                  "Novo Testamento",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+
+              ...newTestament.map((book) {
+                return ListTile(
+                  title: Text(book.name),
+                  trailing: const Icon(Icons.arrow_forward_rounded),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BibleChaptersPage(book: book),
+                      ),
+                    );
+                  },
+                );
+              }),
+            ],
           );
         },
       ),

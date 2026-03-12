@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/More/features/bible/models/bible_book.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_books_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_favorites_page.dart';
+import 'package:flutter_application_1/features/More/features/bible/ui/bible_reader_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/weekly_reading_page.dart';
 
 
@@ -34,7 +36,14 @@ class MaisPage extends StatelessWidget{
       MoreOption(
         title: "Bíblia",
         icon: Icons.menu_book_rounded,
-        page: BibleBooksPage(),
+        page: BibleReaderPage(
+          book: BibleBook(
+            name: "Gênisis", 
+            chapters: 50, 
+            index: 0,
+          ),
+          chapter: 1,
+        ),
       ),
 
       MoreOption(

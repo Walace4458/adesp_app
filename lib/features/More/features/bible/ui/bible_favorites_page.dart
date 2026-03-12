@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../service/bible_favorites_service.dart';
+import '../service/bible_local_service.dart';
 import '../service/bible_books_service.dart';
 import '../models/bible_book.dart';
-import 'bible_reader_page.dart';
 
 class BibleFavoritesPage extends StatefulWidget {
   const BibleFavoritesPage({super.key});
@@ -14,12 +15,9 @@ class BibleFavoritesPage extends StatefulWidget {
 
 class _BibleFavoritesPageState extends State<BibleFavoritesPage> {
 
-  final favoritesService = BibleFavoritesService();
+  final favoriteService = BibleFavoritesService();
+  final bibleService = BibleLocalService();
   final booksService = BibleBooksService();
-
-  Future<List<String>> _loadFavorites() {
-    return favoritesService.getFavorites();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,83 +28,192 @@ class _BibleFavoritesPageState extends State<BibleFavoritesPage> {
       ),
 
       body: FutureBuilder<List<String>>(
+        future: favoriteService.getFavorites(),
 
-        future: _loadFavorites(),
+        builder: (context, snapshot) {
 
-        builder: (context, favSnapshot) {
-
-          if (!favSnapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          final favorites = favSnapshot.data!;
+          final favorites = snapshot.data!;
 
           if (favorites.isEmpty) {
             return const Center(
-              child: Text("Nenhum versículo favoritado ainda."),
+              child: Text("Nenhum versículo favoritado ainda"),
             );
           }
 
-          return FutureBuilder<List<BibleBook>>(
+          return ListView.builder(
 
-            future: booksService.loadBooks(),
+            padding: const EdgeInsets.all(16),
+            itemCount: favorites.length,
 
-            builder: (context, bookSnapshot) {
+            itemBuilder: (context, index) {
 
-              if (!bookSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
-              }
+              final reference = favorites[index];
 
-              final books = bookSnapshot.data!;
+              return Card(
 
-              return ListView.builder(
-                itemCount: favorites.length,
-                itemBuilder: (context, index) {
+                margin: const EdgeInsets.only(bottom: 16),
 
-                  final reference = favorites[index];
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
 
-                  return ListTile(
-                    leading: const Icon(Icons.star, color: Colors.amber),
-                    title: Text(reference),
+                elevation: 2,
 
-                    onTap: () {
+                child: Padding(
 
-                      /// exemplo: João 3:16
-                      final parts = reference.split(" ");
+                  padding: const EdgeInsets.all(16),
 
-                      final bookName = parts.first;
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
-                      final chapterVerse = parts.last.split(":");
+                    children: [
 
-                      final chapter = int.parse(chapterVerse[0]);
+                      Row(
+                        children: [
 
-                      /// encontrar livro na lista carregada
-                      final BibleBook book = books.firstWhere(
-                        (b) => b.name.toLowerCase() == bookName.toLowerCase(),
-                        orElse: () => books.first,
-                      );
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BibleReaderPage(
-                            book: book,
-                            chapter: chapter,
+                          const Icon(
+                            Icons.star,
+                            color: Colors.amber,
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
+
+                          const SizedBox(width: 8),
+
+                          Text(
+                            reference,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      FutureBuilder<String>(
+                        future: getVerseText(reference),
+
+                        builder: (context, snapshot) {
+
+                          if (!snapshot.hasData) {
+                            return const Text("Carregando...");
+                          }
+
+                          return Text(
+                            snapshot.data!,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+
+                        children: [
+
+                          TextButton.icon(
+
+                            icon: const Icon(Icons.share),
+
+                            label: const Text("Compartilhar"),
+
+                            onPressed: () async {
+
+                              final verseText =
+                                  await getVerseText(reference);
+
+                             await SharePlus.instance.share(
+                                ShareParams(
+                                  text: "$reference\n\n$verseText",
+                                ),
+                              );
+
+                            },
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          TextButton.icon(
+
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                            ),
+
+                            label: const Text(
+                              "Remover",
+                              style: TextStyle(color: Colors.red),
+                            ),
+
+                            onPressed: () async {
+
+                              await favoriteService
+                                  .toggleFavorite(reference);
+
+                              setState(() {});
+
+                            },
+                          ),
+
+                        ],
+                      )
+
+                    ],
+                  ),
+                ),
               );
             },
           );
         },
       ),
     );
+  }
+
+  Future<String> getVerseText(String reference) async {
+    try {
+
+      final lastSpace = reference.lastIndexOf(" ");
+
+      final bookName = reference.substring(0, lastSpace);
+      final chapterVerse = reference.substring(lastSpace + 1);
+
+      final parts = chapterVerse.split(":");
+
+      final chapter = int.parse(parts[0]) - 1;
+      final verse = int.parse(parts[1]) - 1;
+
+      final books = await booksService.loadBooks();
+
+      final book = books.firstWhere(
+        (b) =>
+            b.name.toLowerCase().contains(bookName.toLowerCase()) ||
+            bookName.toLowerCase().contains(b.name.toLowerCase()),
+        orElse: () => books.first,
+      );
+
+      final verses = await bibleService.getVerses(book.index, chapter);
+
+      if (verse >= verses.length) {
+        return "Versículo não encontrado";
+      }
+
+      return verses[verse];
+
+    } catch (e) {
+
+      print("ERRO: $e");
+
+      return "Erro ao carregar versículo";
+    }
   }
 }

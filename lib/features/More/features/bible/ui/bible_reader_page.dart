@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/bible_book.dart';
 import '../service/bible_local_service.dart';
 import '../service/bible_favorites_service.dart';
+import '../service/bible_books_service.dart';
 
 class BibleReaderPage extends StatefulWidget {
   final BibleBook book;
@@ -19,139 +21,399 @@ class BibleReaderPage extends StatefulWidget {
 }
 
 class _BibleReaderPageState extends State<BibleReaderPage> {
+
   final service = BibleLocalService();
-  final favoritesService = BibleFavoritesService();
+  final favoriteService = BibleFavoritesService();
+
+  double fontSize = 18;
+  bool darkMode = false;
+
+  final ScrollController controller = ScrollController();
+
+  void loadSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  setState(() {
+    darkMode = prefs.getBool("bible_dark_mode") ?? false;
+  });
+}
+
+void saveDarkMode(bool value) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.setBool("bible_dark_mode", value);
+}
+
+@override
+void initState() {
+  super.initState();
+  loadSettings();
+}
+
+  /// ABRIR LISTA DE LIVROS
+  void abrirSelectorDeLivro() async {
+
+    final booksService = BibleBooksService();
+    final books = await booksService.loadBooks();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+
+          child: ListView.builder(
+            itemCount: books.length,
+
+            itemBuilder: (context, index) {
+
+              final book = books[index];
+
+              return ListTile(
+                title: Text(book.name),
+
+                onTap: () {
+
+                  Navigator.pop(context);
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BibleReaderPage(
+                        book: book,
+                        chapter: 1,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// ABRIR GRID DE CAPÍTULOS
+  void abrirSelectorCapitulo() async {
+
+    final total = await service.getTotalChapters(widget.book.index);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5,
+
+          child: GridView.builder(
+
+            padding: const EdgeInsets.all(20),
+
+            gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 5,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+            ),
+
+            itemCount: total,
+
+            itemBuilder: (context, index) {
+
+              final chapterNumber = index + 1;
+
+              return InkWell(
+                onTap: () {
+
+                  Navigator.pop(context);
+
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BibleReaderPage(
+                        book: widget.book,
+                        chapter: chapterNumber,
+                      ),
+                    ),
+                  );
+                },
+
+                child: Container(
+                  alignment: Alignment.center,
+
+                  decoration: BoxDecoration(
+                    border: Border.all(),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+
+                  child: Text(
+                    chapterNumber.toString(),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("${widget.book.name} ${widget.chapter}"),
-      ),
-      body: FutureBuilder(
-        future: service.getVerses(widget.book.index, widget.chapter - 1),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
 
-          final verses = snapshot.data!;
+    final theme = darkMode ? ThemeData.dark() : ThemeData.light();
 
-          return Column(
-            children: [
+    return Theme(
+      data: theme,
+      child: Scaffold(
 
-              /// LISTA DE VERSÍCULOS
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: verses.length,
-                  itemBuilder: (context, index) {
+        appBar: AppBar(
+          title: const Text("Bíblia"),
 
-                    final verse = verses[index];
+          actions: [
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+            /// DIMINUIR FONTE
+            IconButton(
+              icon: const Icon(Icons.remove),
+              onPressed: () {
+                setState(() {
+                  fontSize -= 2;
+                  if (fontSize < 12) fontSize = 12;
+                });
+              },
+            ),
 
-                          Expanded(
-                            child: Text(
-                              "${index + 1}. $verse",
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
+            /// AUMENTAR FONTE
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                setState(() {
+                  fontSize += 2;
+                });
+              },
+            ),
+
+            /// MODO NOTURNO
+            IconButton(
+              icon: Icon(
+                darkMode ? Icons.light_mode : Icons.dark_mode,
+              ),
+              onPressed: () {
+                  final newValue = !darkMode;
+                  setState(() {
+                    darkMode = newValue;
+                  });
+                  saveDarkMode(newValue);
+                },
+            ),
+          ],
+        ),
+
+        body: FutureBuilder(
+          future: service.getVerses(widget.book.index, widget.chapter - 1),
+
+          builder: (context, snapshot) {
+
+            if (!snapshot.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            final verses = snapshot.data!;
+
+            return Column(
+              children: [
+
+                /// BARRA LIVRO + CAPÍTULO
+                Container(
+                  padding: const EdgeInsets.all(10),
+
+                  child: Row(
+                    children: [
+
+                      /// LIVRO
+                      InkWell(
+                        onTap: abrirSelectorDeLivro,
+
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
 
-                          FutureBuilder<bool>(
-                            future: favoritesService.isFavorite(
-                              "${widget.book.name} ${widget.chapter}:${index + 1}",
-                            ),
-                            builder: (context, snapshot) {
+                          decoration: BoxDecoration(
+                            border: Border.all(),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
 
-                              final isFav = snapshot.data ?? false;
+                          child: Text(widget.book.name),
+                        ),
+                      ),
 
-                              return IconButton(
-                                icon: Icon(
-                                  isFav ? Icons.star : Icons.star_border,
-                                  color: Colors.amber,
+                      const SizedBox(width: 10),
+
+                      /// CAPÍTULO
+                      InkWell(
+                        onTap: abrirSelectorCapitulo,
+
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+
+                          decoration: BoxDecoration(
+                            border: Border.all(),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+
+                          child: Text(widget.chapter.toString()),
+                        ),
+                      ),
+
+                    ],
+                  ),
+                ),
+
+                /// LISTA DE VERSÍCULOS
+                Expanded(
+                  child: ListView.builder(
+
+                    controller: controller,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: verses.length,
+
+                    itemBuilder: (context, index) {
+
+                      final verse = verses[index];
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            /// TEXTO DO VERSÍCULO
+                            Expanded(
+                              child: Text(
+                                "${index + 1}. $verse",
+
+                                style: TextStyle(
+                                  fontSize: fontSize,
+                                  height: 1.5,
                                 ),
-                                onPressed: () async {
+                              ),
+                            ),
 
-                                  final reference =
-                                      "${widget.book.name} ${widget.chapter}:${index + 1}";
+                            /// FAVORITO
+                            FutureBuilder<bool>(
+                              future: favoriteService.isFavorite(
+                                "${widget.book.name} ${widget.chapter}:${index + 1}",
+                              ),
 
-                                  await favoritesService.toggleFavorite(reference);
+                              builder: (context, snapshot) {
 
-                                  setState(() {});
-                                },
-                              );
-                            },
-                          ),
+                                final isFav = snapshot.data ?? false;
 
-                        ],
-                      ),
-                    );
-                  },
+                                return IconButton(
+                                  icon: Icon(
+                                    isFav
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    color: Colors.amber,
+                                  ),
+
+                                  onPressed: () async {
+
+                                    final reference =
+                                        "${widget.book.name} ${widget.chapter}:${index + 1}";
+
+                                    await favoriteService
+                                        .toggleFavorite(reference);
+
+                                    setState(() {});
+                                  },
+                                );
+                              },
+                            ),
+
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-              /// NAVEGAÇÃO ENTRE CAPÍTULOS
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+                /// NAVEGAÇÃO DE CAPÍTULO
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
 
-                    if (widget.chapter > 1)
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                    children: [
+
+                      /// CAPÍTULO ANTERIOR
+                      if (widget.chapter > 1)
+                        ElevatedButton(
+                          onPressed: () {
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BibleReaderPage(
+                                  book: widget.book,
+                                  chapter: widget.chapter - 1,
+                                ),
+                              ),
+                            );
+                          },
+
+                          child: const Text("Capítulo anterior"),
+                        ),
+
+                      /// PRÓXIMO CAPÍTULO
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BibleReaderPage(
-                                book: widget.book,
-                                chapter: widget.chapter - 1,
+                        onPressed: () async {
+
+                          final total =
+                              await service.getTotalChapters(widget.book.index);
+
+                          if (widget.chapter < total) {
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BibleReaderPage(
+                                  book: widget.book,
+                                  chapter: widget.chapter + 1,
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         },
-                        child: const Text("Capítulo anterior"),
+
+                        child: const Text("Próximo capítulo"),
                       ),
 
-                    ElevatedButton(
-                      onPressed: () async {
-
-                        final total =
-                            await service.getTotalChapters(widget.book.index);
-
-                        if (widget.chapter < total) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => BibleReaderPage(
-                                book: widget.book,
-                                chapter: widget.chapter + 1,
-                              ),
-                            ),
-                          );
-                        }
-
-                      },
-                      child: const Text("Próximo capítulo"),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

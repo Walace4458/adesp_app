@@ -1,29 +1,31 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/bible_book.dart';
+import '../data/bible_book_names.dart';
 
 class BibleBooksService {
+
   Future<List<BibleBook>> loadBooks() async {
+
     final jsonString = await rootBundle.loadString(
-      'lib/assets/bible/bible.json',
+      'assets/bible/bible.json',
     );
-
-    final data = json.decode(jsonString);
-    final books = data["books"] as List;
-
+    final List books = json.decode(jsonString);
     List<BibleBook> result = [];
 
-    for (int i = 0; i < books.length; i++ ) {
+    for (int i = 0; i < books.length; i++) {
+
       final book = books[i];
 
       result.add(
         BibleBook(
-          name: book["name"], 
-          chapters: book["chapters"].length, 
+          name: bibleBookNames[book["abbrev"]] ?? book["abbrev"], // aqui mudou
+          chapters: book["chapters"].length,
           index: i,
-        )
+        ),
       );
     }
+
     return result;
   }
 }
