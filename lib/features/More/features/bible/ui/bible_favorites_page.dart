@@ -5,6 +5,7 @@ import '../service/bible_favorites_service.dart';
 import '../service/bible_local_service.dart';
 import '../service/bible_books_service.dart';
 import '../models/bible_book.dart';
+import '../ui/bible_reader_page.dart';
 
 class BibleFavoritesPage extends StatefulWidget {
   const BibleFavoritesPage({super.key});
@@ -45,7 +46,6 @@ class _BibleFavoritesPageState extends State<BibleFavoritesPage> {
           }
 
           return ListView.builder(
-
             padding: const EdgeInsets.all(16),
             itemCount: favorites.length,
 
@@ -56,119 +56,144 @@ class _BibleFavoritesPageState extends State<BibleFavoritesPage> {
               return Card(
 
                 margin: const EdgeInsets.only(bottom: 16),
+                elevation: 3,
 
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
 
-                elevation: 2,
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
 
-                child: Padding(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
 
-                  padding: const EdgeInsets.all(16),
+                    onTap: () async {
 
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                      final data = await parseReference(reference);
 
-                    children: [
-
-                      Row(
-                        children: [
-
-                          const Icon(
-                            Icons.star,
-                            color: Colors.amber,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BibleReaderPage(
+                            book: data["book"],
+                            chapter: data["chapter"] + 1,
+                            highlightVerse: data["verse"],
                           ),
+                        ),
+                      );
 
-                          const SizedBox(width: 8),
+                    },
 
-                          Text(
-                            reference,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18,16,18,12),
 
-                        ],
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      FutureBuilder<String>(
-                        future: getVerseText(reference),
-
-                        builder: (context, snapshot) {
-
-                          if (!snapshot.hasData) {
-                            return const Text("Carregando...");
-                          }
-
-                          return Text(
-                            snapshot.data!,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
 
                         children: [
 
-                          TextButton.icon(
+                          /// REFERÊNCIA
+                          Row(
+                            children: [
 
-                            icon: const Icon(Icons.share),
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
 
-                            label: const Text("Compartilhar"),
+                              const SizedBox(width: 8),
 
-                            onPressed: () async {
+                              Text(
+                                reference,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
 
-                              final verseText =
-                                  await getVerseText(reference);
+                            ],
+                          ),
 
-                             await SharePlus.instance.share(
-                                ShareParams(
-                                  text: "$reference\n\n$verseText",
+                          const SizedBox(height: 10),
+
+                          /// TEXTO DO VERSÍCULO
+                          FutureBuilder<String>(
+                            future: getVerseText(reference),
+
+                            builder: (context, snapshot) {
+
+                              if (!snapshot.hasData) {
+                                return const Text("Carregando...");
+                              }
+
+                              return Text(
+                                snapshot.data!,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  height: 1.6,
                                 ),
                               );
-
                             },
                           ),
 
-                          const SizedBox(width: 10),
+                          const SizedBox(height: 14),
 
-                          TextButton.icon(
+                          /// BOTÕES
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
 
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.red,
-                            ),
+                            children: [
 
-                            label: const Text(
-                              "Remover",
-                              style: TextStyle(color: Colors.red),
-                            ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.share),
+                                label: const Text("Compartilhar"),
 
-                            onPressed: () async {
+                                onPressed: () async {
 
-                              await favoriteService
-                                  .toggleFavorite(reference);
+                                  final verseText =
+                                      await getVerseText(reference);
 
-                              setState(() {});
+                                  await SharePlus.instance.share(
+                                    ShareParams(
+                                      text: "$reference\n\n$verseText",
+                                    ),
+                                  );
 
-                            },
-                          ),
+                                },
+                              ),
+
+                              const SizedBox(width: 6),
+
+                              TextButton.icon(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+
+                                label: const Text(
+                                  "Remover",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+
+                                onPressed: () async {
+
+                                  await favoriteService
+                                      .toggleFavorite(reference);
+
+                                  setState(() {});
+
+                                },
+                              ),
+
+                            ],
+                          )
 
                         ],
-                      )
-
-                    ],
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -179,7 +204,38 @@ class _BibleFavoritesPageState extends State<BibleFavoritesPage> {
     );
   }
 
+  /// CONVERTE REFERÊNCIA PARA LIVRO/CAPÍTULO/VERSO
+  Future<Map<String, dynamic>> parseReference(String reference) async {
+
+    final lastSpace = reference.lastIndexOf(" ");
+
+    final bookName = reference.substring(0, lastSpace);
+    final chapterVerse = reference.substring(lastSpace + 1);
+
+    final parts = chapterVerse.split(":");
+
+    final chapter = int.parse(parts[0]) - 1;
+    final verse = int.parse(parts[1]) - 1;
+
+    final books = await booksService.loadBooks();
+
+    final book = books.firstWhere(
+      (b) =>
+          b.name.toLowerCase().contains(bookName.toLowerCase()) ||
+          bookName.toLowerCase().contains(b.name.toLowerCase()),
+      orElse: () => books.first,
+    );
+
+    return {
+      "book": book,
+      "chapter": chapter,
+      "verse": verse,
+    };
+  }
+
+  /// BUSCA TEXTO DO VERSÍCULO
   Future<String> getVerseText(String reference) async {
+
     try {
 
       final lastSpace = reference.lastIndexOf(" ");

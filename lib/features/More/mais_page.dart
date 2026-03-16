@@ -3,17 +3,16 @@ import 'package:flutter_application_1/features/More/features/bible/models/bible_
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_books_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_favorites_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_reader_page.dart';
-import 'package:flutter_application_1/features/More/features/bible/ui/weekly_reading_page.dart';
+import 'package:flutter_application_1/features/More/features/bible/ui/reading_page.dart';
+import 'package:flutter_application_1/features/More/features/contribution/pages/contribution_page.dart';
+import 'package:flutter_application_1/features/More/features/testimonies/ui/testimonies/testimonies_page.dart';
 
 
 import '../More/models/more_option.dart';
 import '../More/ui/pages/widgets/more_option_tile.dart';
-
 import '../More/ui/pages/profile_page.dart';
 import '../More/ui/pages/prayer_requests_page.dart';
-import '../More/ui/pages/testimonies_page.dart';
 import '../More/ui/pages/contact_page.dart';
-import '../more/ui/pages/contribuation_page.dart';
 
 class MaisPage extends StatelessWidget{
   const MaisPage({super.key});
@@ -30,7 +29,7 @@ class MaisPage extends StatelessWidget{
       MoreOption(
         title: "Contribuição",
         icon: Icons.account_balance_rounded, 
-        page: const ContribuationPage(), 
+        page: const ContributionPage(), 
       ),
 
       MoreOption(
@@ -59,15 +58,15 @@ class MaisPage extends StatelessWidget{
       ),
 
       MoreOption(
-        title: "Leitura da Semana",
+        title: "Leitura",
         icon: Icons.menu_book_rounded,
-        page: const WeeklyReadingPage(),
+        page: const ReadingPage(),
       ),
 
       MoreOption(
         title: "Testemunhos",
         icon: Icons.record_voice_over_rounded,
-        page: const TestimoniesPage(),
+        page: TestimoniesPage(),
       ),
 
       MoreOption(

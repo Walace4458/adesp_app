@@ -9,11 +9,13 @@ import '../service/bible_books_service.dart';
 class BibleReaderPage extends StatefulWidget {
   final BibleBook book;
   final int chapter;
+  final int? highlightVerse;
 
   const BibleReaderPage({
     super.key,
     required this.book,
     required this.chapter,
+    this.highlightVerse,
   });
 
   @override
@@ -48,6 +50,18 @@ void saveDarkMode(bool value) async {
 void initState() {
   super.initState();
   loadSettings();
+
+  if (widget.highlightVerse !=null) {
+    Future.delayed(const Duration(milliseconds: 400), () {
+      final offset = widget.highlightVerse! * 80.0;
+
+      controller.animateTo(
+        offset, 
+        duration: const Duration(milliseconds: 500), 
+        curve: Curves.easeInOut,
+      );
+    });
+  }
 }
 
   /// ABRIR LISTA DE LIVROS
