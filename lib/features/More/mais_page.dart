@@ -5,12 +5,12 @@ import 'package:flutter_application_1/features/More/features/bible/ui/bible_favo
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_reader_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/reading_page.dart';
 import 'package:flutter_application_1/features/More/features/contribution/pages/contribution_page.dart';
+import 'package:flutter_application_1/features/More/features/profile/pages/profile_page.dart';
 import 'package:flutter_application_1/features/More/features/testimonies/ui/testimonies/testimonies_page.dart';
 
 
 import '../More/models/more_option.dart';
 import '../More/ui/pages/widgets/more_option_tile.dart';
-import '../More/ui/pages/profile_page.dart';
 import '../More/ui/pages/prayer_requests_page.dart';
 import '../More/ui/pages/contact_page.dart';
 

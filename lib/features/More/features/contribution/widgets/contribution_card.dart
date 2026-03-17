@@ -2,99 +2,53 @@ import 'package:flutter/material.dart';
 
 class ContributionCard extends StatelessWidget {
   final String title;
-  final String price;
-  final String description;
-  final IconData icon;
+  final String imageUrl;
   final VoidCallback onTap;
 
   const ContributionCard({
     super.key,
     required this.title,
-    required this.price,
-    required this.description,
-    required this.icon,
+    required this.imageUrl,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.only(bottom: 14),
+    return GestureDetector(
+      onTap: onTap,
 
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
 
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
+        child: Stack(
+          children: [
+            Image.network(
+              imageUrl,
+              height: 150,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
 
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-
-          child: Row(
-            children: [
-
-              /// Ícone
-              Container(
-                padding: const EdgeInsets.all(10),
-
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.15),
-
-                  borderRadius: BorderRadius.circular(10),
-                ),
-
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+            Container(
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
               ),
+            ),
 
-              const SizedBox(width: 14),
-
-              /// Texto
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                  children: [
-
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      description,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              /// Valor
-              Text(
-                price,
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: Text(
+                title,
                 style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
