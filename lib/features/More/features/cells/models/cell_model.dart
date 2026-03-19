@@ -1,15 +1,17 @@
 class CellModel {
-  String id;
-  String name;
-  String leader;
-  String day;
-  String time;
-  String address;
+  final String id;
+  final String name;
+  final String category;
+  final String leaderName;
+  final String day;
+  final String time;
+  final String address;
 
   CellModel({
     required this.id,
     required this.name,
-    required this.leader,
+    required this.category,
+    required this.leaderName,
     required this.day,
     required this.time,
     required this.address,

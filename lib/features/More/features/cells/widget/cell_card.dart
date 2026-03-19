@@ -3,25 +3,23 @@ import '../models/cell_model.dart';
 
 class CellCard extends StatelessWidget {
   final CellModel cell;
+  final VoidCallback onTap;
 
-  const CellCard({super.key, required this.cell});
+  const CellCard({
+    super.key,
+    required this.cell,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      margin: const EdgeInsets.all(12),
       child: ListTile(
-        leading: const Icon(Icons.groups, color: Colors.blue),
+        onTap: onTap,
         title: Text(cell.name),
-        subtitle: Text("${cell.day} • ${cell.time}\nLíder: ${cell.leader}"),
-        isThreeLine: true,
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {
-          print("Abrir célula ${cell.name}");
-        },
+        subtitle: Text("${cell.day} • ${cell.time}"),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded),
       ),
     );
   }
