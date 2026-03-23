@@ -1,91 +1,105 @@
 import '../models/cell_model.dart';
-import '../models/member_model.dart';
 import '../models/interested_model.dart';
+import '../models/member_model.dart';
 import '../models/material_model.dart';
 
 class CellService {
-  /// Cells
+
+  // ================= MOCK CELLS =================
+
+  static final List<CellModel> _cellsMock = [
+    CellModel(
+      id: '1',
+      name: 'Célula Central Jovens',
+      category: 'Jovens',
+      leaderName: 'Lucas Silva',
+      day: 'Quarta-feira',
+      time: '19:30',
+      address: 'Rua A, 123',
+    ),
+    CellModel(
+      id: '2',
+      name: 'Célula Família',
+      category: 'Mistos',
+      leaderName: 'Marcos Oliveira',
+      day: 'Sexta-feira',
+      time: '20:00',
+      address: 'Rua B, 456',
+    ),
+  ];
+
   static List<CellModel> getMyCells() {
-    return [
-      CellModel(
-        id: '1', 
-        name: 'Célula Vida', 
-        category: "Jovens", 
-        leaderName: "João Silva", 
-        day: "Quarta-Feira", 
-        time: '19:30', 
-        address: "Rua das Flores, 123",
-      ),
-      CellModel(
-        id: '2', 
-        name: 'Célula Fé', 
-        category: "Mista", 
-        leaderName: "Maria Souza", 
-        day: "Sexta-feira", 
-        time: '20:00', 
-        address: "Av. Central, 456",
-      ),
-    ];
+    return _cellsMock;
   }
 
-  /// Members
-  static List<MemberModel> getMembers(String cellId) {
-    return [
-      MemberModel(
-        id: '1', 
-        name: 'Carlos', 
-        birthDate: DateTime(2000, 3, 20)
-      ),
-      MemberModel(
-        id: '2', 
-        name: 'Ana', 
-        birthDate: DateTime(1998, 3, 25),
-      ),
-    ];
-  }
+  // ================= INTERESTED =================
 
-  ///Interested
-  static List<InterestedModel> getInterested(String cellId) {
-    return [
+  static final Map<String, List<InterestedModel>> _interestedMock = {
+    '1': [
       InterestedModel(
-        id: '1', 
-        name: 'Lucas', 
+        id: '1',
+        name: 'João',
         status: InterestedStatus.novo,
       ),
-      InterestedModel(
-        id: '2', 
-        name: 'Fernanda', 
-        status: InterestedStatus.visitou,
-      ),
-      InterestedModel(
-        id: '3', 
-        name: 'Bruno', 
-        status: InterestedStatus.membro,
-      ),
-    ];
+    ],
+  };
+
+  static List<InterestedModel> getInterested(String cellId) {
+    return _interestedMock[cellId] ?? [];
   }
 
-  ///Materials
+  // 🔥 CORRIGIDO (AGORA NOMEADO)
+  static void addInterested({
+    required String cellId,
+    required InterestedModel interested,
+  }) {
+    _interestedMock.putIfAbsent(cellId, () => []);
+    _interestedMock[cellId]!.add(interested);
+  }
+
+  // ================= MEMBERS =================
+
+  static final Map<String, List<MemberModel>> _membersMock = {
+    '1': [
+      MemberModel(
+        id: '1',
+        name: 'Maria',
+        birthDate: DateTime(2000, 3, 23),
+      ),
+    ],
+  };
+
+  static List<MemberModel> getMembers(String cellId) {
+    return _membersMock[cellId] ?? [];
+  }
+
+  // ================= MATERIALS =================
+
+  static final Map<String, List<MaterialModel>> _materialsMock = {
+    '1': [
+      MaterialModel(
+        id: '1',
+        title: 'Estudo da Semana',
+        type: CellMaterialType.text,
+        content: 'Conteúdo aqui...',
+      ),
+    ],
+  };
+
   static List<MaterialModel> getMaterials(String cellId) {
-    return [
-      MaterialModel(
-        id: '1', 
-        title: 'Estudo da Semana', 
-        type: CellMaterialType.pdf, 
-        content: 'link_pdf_aqui',
-      ),
-      MaterialModel(
-        id: '2', 
-        title: 'Vídeo YouTube', 
-        type: CellMaterialType.link, 
-        content: 'https://youtube.com',
-      ),
-      MaterialModel(
-        id: '3', 
-        title: 'Resumo', 
-        type: CellMaterialType.text, 
-        content: 'Texto do estudo...',
-      ),
-    ];
+    return _materialsMock[cellId] ?? [];
+  }
+
+    static void togglePresence(String cellId, String memberId) {
+    final members = _membersMock[cellId];
+
+    if (members == null) return;
+
+    final index = members.indexWhere((m) => m.id == memberId);
+
+    if (index == -1) return;
+
+    members[index].isPresent = !members[index].isPresent;
   }
 }
+

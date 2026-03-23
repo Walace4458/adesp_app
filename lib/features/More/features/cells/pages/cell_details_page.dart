@@ -12,7 +12,9 @@ import '../widget/member_tile.dart';
 import '../widget/interested_tile.dart';
 import '../widget/action_button.dart';
 
-class CellDetailsPage extends StatelessWidget {
+import 'add_person_page.dart';
+
+class CellDetailsPage extends StatefulWidget {
   final CellModel cell;
 
   const CellDetailsPage({
@@ -21,11 +23,28 @@ class CellDetailsPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final members = CellService.getMembers(cell.id);
-    final interested = CellService.getInterested(cell.id);
-    final materials = CellService.getMaterials(cell.id); // ✅ corrigido
+  State<CellDetailsPage> createState() => _CellDetailsPageState();
+}
 
+class _CellDetailsPageState extends State<CellDetailsPage> {
+  late List<MemberModel> members;
+  late List<InterestedModel> interested;
+  late List<MaterialModel> materials;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
+    members = CellService.getMembers(widget.cell.id);
+    interested = CellService.getInterested(widget.cell.id);
+    materials = CellService.getMaterials(widget.cell.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
@@ -33,16 +52,21 @@ class CellDetailsPage extends StatelessWidget {
           _buildHeader(context),
 
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _cardWrapper(_buildInterested(interested)),
-                  _cardWrapper(_buildBirthdays(members)),
-                  _cardWrapper(_buildMaterials(materials)),
-                  _cardWrapper(_buildActions()),
-                  const SizedBox(height: 30),
-                ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _cardWrapper(_buildInterested()),
+                      _cardWrapper(_buildBirthdays()),
+                      _cardWrapper(_buildMaterials()),
+                      _cardWrapper(_buildActions(context)),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
               ),
             ),
           )
@@ -57,43 +81,73 @@ class CellDetailsPage extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      backgroundColor: Colors.deepPurple,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-        title: Text(
-          cell.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF5F2C82), Color(0xFF49A09D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      leading: const BackButton(color: Colors.white),
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCollapsed = constraints.maxHeight < 120;
+
+          return Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF5F2C82), Color(0xFF49A09D)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 100, 16, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _infoChip(Icons.group, cell.category),
-                const SizedBox(height: 8),
-                _infoChip(Icons.schedule, "${cell.day} • ${cell.time}"),
-                const SizedBox(height: 8),
-                _infoChip(Icons.location_on, cell.address),
-              ],
+            child: SafeArea(
+              child: Stack(
+                children: [
+                  if (!isCollapsed)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.cell.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _infoChip(Icons.group, widget.cell.category),
+                          const SizedBox(height: 6),
+                          _infoChip(Icons.schedule, "${widget.cell.day} • ${widget.cell.time}"),
+                          const SizedBox(height: 6),
+                          _infoChip(Icons.location_on, widget.cell.address),
+                        ],
+                      ),
+                    ),
+
+                  if (isCollapsed)
+                    Positioned(
+                      left: 56,
+                      bottom: 16,
+                      child: Text(
+                        widget.cell.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _infoChip(IconData icon, String text) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: Colors.white70, size: 18),
         const SizedBox(width: 6),
@@ -108,31 +162,35 @@ class CellDetailsPage extends StatelessWidget {
     );
   }
 
-  // ================= WRAPPER =================
+  // ================= CARD =================
 
-      Widget _cardWrapper(Widget child) {
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+  Widget _cardWrapper(Widget child) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: child,
-        );
-      }
+        ],
+      ),
+      child: child,
+    );
+  }
 
   // ================= INTERESTED =================
 
-  Widget _buildInterested(List<InterestedModel> interested) {
+  Widget _buildInterested() {
+    if (interested.isEmpty) {
+      return const Text("Nenhum interessado ainda");
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -145,20 +203,36 @@ class CellDetailsPage extends StatelessWidget {
 
   // ================= BIRTHDAYS =================
 
-  Widget _buildBirthdays(List<MemberModel> members) {
+  Widget _buildBirthdays() {
+    if (members.isEmpty) {
+      return const Text("Nenhum aniversariante este mês");
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionTitle("Aniversariantes 🎉"),
         const SizedBox(height: 8),
-        ...members.map((m) => MemberTile(m)).toList(),
+       ...members.map((m) => MemberTile(
+          member: m,
+          cellId: widget.cell.id,
+          onUpdated: () {
+            setState(() {
+              _loadData();
+            });
+          },
+        )).toList(),
       ],
     );
   }
 
   // ================= MATERIALS =================
 
-  Widget _buildMaterials(List<MaterialModel> materials) {
+  Widget _buildMaterials() {
+    if (materials.isEmpty) {
+      return const Text("Nenhum material disponível");
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -167,22 +241,33 @@ class CellDetailsPage extends StatelessWidget {
         ...materials.map((m) {
           IconData icon;
 
-            switch (m.type) {
-              case CellMaterialType.pdf:
-                icon = Icons.picture_as_pdf_rounded;
-                break;
-              case CellMaterialType.link:
-                icon = Icons.link_rounded;
-                break;
-              case CellMaterialType.text:
-                icon = Icons.text_snippet_rounded;
-                break;
-            }
+          switch (m.type) {
+            case CellMaterialType.pdf:
+              icon = Icons.picture_as_pdf_rounded;
+              break;
+            case CellMaterialType.link:
+              icon = Icons.link_rounded;
+              break;
+            case CellMaterialType.text:
+              icon = Icons.text_snippet_rounded;
+              break;
+          }
 
-          return ListTile(
-            leading: Icon(icon),
-            title: Text(m.title),
-            onTap: () {},
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: Icon(icon, color: Colors.deepPurple),
+              title: Text(
+                m.title,
+                style: const TextStyle(color: Colors.black),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {},
+            ),
           );
         }).toList(),
       ],
@@ -191,7 +276,7 @@ class CellDetailsPage extends StatelessWidget {
 
   // ================= ACTIONS =================
 
-    Widget _buildActions() {
+  Widget _buildActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -204,7 +289,20 @@ class CellDetailsPage extends StatelessWidget {
               child: ActionButton(
                 icon: Icons.person_add_rounded,
                 label: "Adicionar",
-                onTap: () {},
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddPersonPage(
+                        cellId: widget.cell.id,
+                      ),
+                    ),
+                  );
+
+                  setState(() {
+                    _loadData();
+                  });
+                },
               ),
             ),
             const SizedBox(width: 10),
