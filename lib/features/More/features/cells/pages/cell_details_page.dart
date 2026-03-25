@@ -4,6 +4,8 @@ import '../models/cell_model.dart';
 import '../models/member_model.dart';
 import '../models/interested_model.dart';
 import '../models/material_model.dart';
+import '../pages/report_history_page.dart';
+import '../pages/dashboard_page.dart'; // 🔥 NOVO
 
 import '../services/cell_service.dart';
 
@@ -13,6 +15,7 @@ import '../widget/interested_tile.dart';
 import '../widget/action_button.dart';
 
 import 'add_person_page.dart';
+import 'report_page.dart';
 
 class CellDetailsPage extends StatefulWidget {
   final CellModel cell;
@@ -60,7 +63,7 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
                   child: Column(
                     children: [
                       _cardWrapper(_buildInterested()),
-                      _cardWrapper(_buildBirthdays()),
+                      _cardWrapper(_buildMembers()),
                       _cardWrapper(_buildMaterials()),
                       _cardWrapper(_buildActions(context)),
                       const SizedBox(height: 30),
@@ -118,9 +121,11 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
                           const SizedBox(height: 8),
                           _infoChip(Icons.group, widget.cell.category),
                           const SizedBox(height: 6),
-                          _infoChip(Icons.schedule, "${widget.cell.day} • ${widget.cell.time}"),
+                          _infoChip(Icons.schedule,
+                              "${widget.cell.day} • ${widget.cell.time}"),
                           const SizedBox(height: 6),
-                          _infoChip(Icons.location_on, widget.cell.address),
+                          _infoChip(
+                              Icons.location_on, widget.cell.address),
                         ],
                       ),
                     ),
@@ -201,27 +206,19 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
     );
   }
 
-  // ================= BIRTHDAYS =================
+  // ================= MEMBERS =================
 
-  Widget _buildBirthdays() {
+  Widget _buildMembers() {
     if (members.isEmpty) {
-      return const Text("Nenhum aniversariante este mês");
+      return const Text("Nenhum membro ainda");
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle("Aniversariantes 🎉"),
+        const SectionTitle("Membros"),
         const SizedBox(height: 8),
-       ...members.map((m) => MemberTile(
-          member: m,
-          cellId: widget.cell.id,
-          onUpdated: () {
-            setState(() {
-              _loadData();
-            });
-          },
-        )).toList(),
+        ...members.map((m) => MemberTile(member: m)).toList(),
       ],
     );
   }
@@ -299,17 +296,15 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
                     ),
                   );
 
-                  setState(() {
-                    _loadData();
-                  });
+                  setState(() => _loadData());
                 },
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: ActionButton(
-                icon: Icons.check_circle_rounded,
-                label: "Presença",
+                icon: Icons.share_rounded,
+                label: "Compartilhar",
                 onTap: () {},
               ),
             ),
@@ -322,17 +317,37 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
           children: [
             Expanded(
               child: ActionButton(
-                icon: Icons.share_rounded,
-                label: "Compartilhar",
-                onTap: () {},
+                icon: Icons.bar_chart_rounded,
+                label: "Relatórios",
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportHistoryPage(
+                        cellId: widget.cell.id,
+                      ),
+                    ),
+                  );
+
+                  setState(() => _loadData());
+                },
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: ActionButton(
-                icon: Icons.bar_chart_rounded,
-                label: "Relatório",
-                onTap: () {},
+                icon: Icons.dashboard_rounded, // 🔥 NOVO
+                label: "Dashboard",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DashboardPage(
+                        cellId: widget.cell.id,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

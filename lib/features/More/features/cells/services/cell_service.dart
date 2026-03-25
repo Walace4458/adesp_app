@@ -1,3 +1,5 @@
+import 'package:flutter_application_1/features/More/features/cells/models/report_model.dart';
+
 import '../models/cell_model.dart';
 import '../models/interested_model.dart';
 import '../models/member_model.dart';
@@ -90,16 +92,33 @@ class CellService {
     return _materialsMock[cellId] ?? [];
   }
 
-    static void togglePresence(String cellId, String memberId) {
-    final members = _membersMock[cellId];
+  // ================= REPORTS =================
 
-    if (members == null) return;
+  static final Map<String, List<ReportModel>> _reportsMock = {
+    '1': [
+      ReportModel(
+        id: '1',
+        cellId: '1',
+        date: DateTime.now().subtract(const Duration(days: 7)),
+        newMembers: ['Carlos', 'Ana'],
+        newVisitors: ['Pedro'],
+        description: 'Reunião muito boa, presença forte e palavra impactante.',
+        hadContribution: true,
+        contributionValue: 120,
+      ),
+    ],
+  };
 
-    final index = members.indexWhere((m) => m.id == memberId);
+  static List<ReportModel> getReports(String cellId) {
+    return _reportsMock[cellId] ?? [];
+  }
 
-    if (index == -1) return;
+  static void addReport(String cellId, ReportModel report) {
+    if (_reportsMock[cellId] == null) {
+      _reportsMock[cellId] = [];
+    }
 
-    members[index].isPresent = !members[index].isPresent;
+    _reportsMock[cellId]!.insert(0, report); // mais recente primeiro
   }
 }
 
