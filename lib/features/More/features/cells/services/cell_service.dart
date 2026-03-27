@@ -102,6 +102,7 @@ class CellService {
         date: DateTime.now().subtract(const Duration(days: 7)),
         newMembers: ['Carlos', 'Ana'],
         newVisitors: ['Pedro'],
+        presentMemberIds: ['1', '2'],
         description: 'Reunião muito boa, presença forte e palavra impactante.',
         hadContribution: true,
         contributionValue: 120,

@@ -9,6 +9,11 @@ import '../pages/dashboard_page.dart'; // 🔥 NOVO
 
 import '../services/cell_service.dart';
 
+import '../services/report_service.dart';
+import '../../insights/services/cell_insights_service.dart';
+import '../../insights/models/insight_item.dart';
+import '../../insights/enums/insight_type.dart';
+
 import '../widget/section_tile.dart';
 import '../widget/member_tile.dart';
 import '../widget/interested_tile.dart';
@@ -33,6 +38,7 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
   late List<MemberModel> members;
   late List<InterestedModel> interested;
   late List<MaterialModel> materials;
+  List<InsightItem> _insights = [];
 
   @override
   void initState() {
@@ -44,8 +50,18 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
     members = CellService.getMembers(widget.cell.id);
     interested = CellService.getInterested(widget.cell.id);
     materials = CellService.getMaterials(widget.cell.id);
+
+    final reports = CellService.getReports(widget.cell.id); // 👈 NOVO
+
+    final service = CellInsightsService();
+
+    _insights = service.generateInsights(
+      members: members,
+      reports: reports,
+    );
   }
 
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,6 +78,9 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
+                      if (_insights.isNotEmpty)
+                      _cardWrapper(_buildInsights()),
+
                       _cardWrapper(_buildInterested()),
                       _cardWrapper(_buildMembers()),
                       _cardWrapper(_buildMaterials()),
@@ -77,6 +96,42 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
       ),
     );
   }
+
+  Widget _buildInsights() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SectionTitle("Insights da Célula"),
+      const SizedBox(height: 8),
+
+      ..._insights.map((insight) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _getInsightColor(insight.type),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            insight.description,
+            style: const TextStyle(color: Colors.black),
+          ),
+        );
+      }).toList(),
+    ],
+  );
+}
+
+Color _getInsightColor(InsightType type) {
+  switch (type) {
+    case InsightType.alert:
+      return Colors.red.withValues(alpha: 0.1);
+    case InsightType.positive:
+      return Colors.green.withValues(alpha: 0.1);
+    case InsightType.neutral:
+      return Colors.grey.withValues(alpha: 0.1);
+  }
+}
 
   // ================= HEADER =================
 
