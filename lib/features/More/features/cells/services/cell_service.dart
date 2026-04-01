@@ -7,7 +7,7 @@ import '../models/material_model.dart';
 
 class CellService {
 
-  // ================= MOCK CELLS =================
+  // ================= CELLS =================
 
   static final List<CellModel> _cellsMock = [
     CellModel(
@@ -18,15 +18,6 @@ class CellService {
       day: 'Quarta-feira',
       time: '19:30',
       address: 'Rua A, 123',
-    ),
-    CellModel(
-      id: '2',
-      name: 'Célula Família',
-      category: 'Mistos',
-      leaderName: 'Marcos Oliveira',
-      day: 'Sexta-feira',
-      time: '20:00',
-      address: 'Rua B, 456',
     ),
   ];
 
@@ -39,7 +30,7 @@ class CellService {
   static final Map<String, List<InterestedModel>> _interestedMock = {
     '1': [
       InterestedModel(
-        id: '1',
+        id: 'i1',
         name: 'João',
         status: InterestedStatus.novo,
       ),
@@ -50,7 +41,6 @@ class CellService {
     return _interestedMock[cellId] ?? [];
   }
 
-  // 🔥 CORRIGIDO (AGORA NOMEADO)
   static void addInterested({
     required String cellId,
     required InterestedModel interested,
@@ -67,6 +57,21 @@ class CellService {
         id: '1',
         name: 'Maria',
         birthDate: DateTime(2000, 3, 23),
+      ),
+      MemberModel(
+        id: '2',
+        name: 'Carlos',
+        birthDate: DateTime(1998, 6, 10),
+      ),
+      MemberModel(
+        id: '3',
+        name: 'Ana',
+        birthDate: DateTime(2001, 1, 5),
+      ),
+      MemberModel(
+        id: '4',
+        name: 'Pedro',
+        birthDate: DateTime(1995, 9, 12),
       ),
     ],
   };
@@ -97,15 +102,26 @@ class CellService {
   static final Map<String, List<ReportModel>> _reportsMock = {
     '1': [
       ReportModel(
-        id: '1',
+        id: 'r1',
         cellId: '1',
         date: DateTime.now().subtract(const Duration(days: 7)),
-        newMembers: ['Carlos', 'Ana'],
-        newVisitors: ['Pedro'],
-        presentMemberIds: ['1', '2'],
-        description: 'Reunião muito boa, presença forte e palavra impactante.',
+        newMembers: ['Lucas'],
+        newVisitors: ['Visitante 1', 'Visitante 2'],
+        presentMemberIds: ['1', '2'], // Maria e Carlos vieram
+        description: 'Reunião forte',
         hadContribution: true,
-        contributionValue: 120,
+        contributionValue: 100,
+      ),
+      ReportModel(
+        id: 'r2',
+        cellId: '1',
+        date: DateTime.now().subtract(const Duration(days: 14)),
+        newMembers: [],
+        newVisitors: ['Visitante 3'],
+        presentMemberIds: ['1'], // só Maria veio
+        description: 'Reunião mais tranquila',
+        hadContribution: false,
+        contributionValue: 0,
       ),
     ],
   };
@@ -115,11 +131,7 @@ class CellService {
   }
 
   static void addReport(String cellId, ReportModel report) {
-    if (_reportsMock[cellId] == null) {
-      _reportsMock[cellId] = [];
-    }
-
-    _reportsMock[cellId]!.insert(0, report); // mais recente primeiro
+    _reportsMock.putIfAbsent(cellId, () => []);
+    _reportsMock[cellId]!.insert(0, report);
   }
 }
-

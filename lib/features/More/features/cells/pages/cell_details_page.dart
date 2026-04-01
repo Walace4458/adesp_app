@@ -4,15 +4,19 @@ import '../models/cell_model.dart';
 import '../models/member_model.dart';
 import '../models/interested_model.dart';
 import '../models/material_model.dart';
+
 import '../pages/report_history_page.dart';
-import '../pages/dashboard_page.dart'; // 🔥 NOVO
+import '../pages/dashboard_page.dart';
 
 import '../services/cell_service.dart';
 
-import '../services/report_service.dart';
 import '../../insights/services/cell_insights_service.dart';
 import '../../insights/models/insight_item.dart';
-import '../../insights/enums/insight_type.dart';
+import '../../insights/widget/insight_card.dart';
+import '../../insights/widget/insight_bottom_sheet.dart';
+
+// 🔥 NOVO IMPORT
+import '../../followup/pages/followup_page.dart';
 
 import '../widget/section_tile.dart';
 import '../widget/member_tile.dart';
@@ -20,7 +24,6 @@ import '../widget/interested_tile.dart';
 import '../widget/action_button.dart';
 
 import 'add_person_page.dart';
-import 'report_page.dart';
 
 class CellDetailsPage extends StatefulWidget {
   final CellModel cell;
@@ -38,6 +41,7 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
   late List<MemberModel> members;
   late List<InterestedModel> interested;
   late List<MaterialModel> materials;
+
   List<InsightItem> _insights = [];
 
   @override
@@ -51,7 +55,7 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
     interested = CellService.getInterested(widget.cell.id);
     materials = CellService.getMaterials(widget.cell.id);
 
-    final reports = CellService.getReports(widget.cell.id); // 👈 NOVO
+    final reports = CellService.getReports(widget.cell.id);
 
     final service = CellInsightsService();
 
@@ -61,7 +65,23 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
     );
   }
 
-  
+  // 🔥 ABRE O BOTTOM SHEET
+  void _onInsightTap(InsightItem insight) {
+    final relatedMembers = members
+        .where((m) => insight.relatedPeopleIds.contains(m.id))
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => InsightBottomSheet(
+        title: insight.title,
+        members: relatedMembers,
+        names: insight.relatedNames,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,59 +99,43 @@ class _CellDetailsPageState extends State<CellDetailsPage> {
                   child: Column(
                     children: [
                       if (_insights.isNotEmpty)
-                      _cardWrapper(_buildInsights()),
+                        _cardWrapper(_buildInsights()),
 
                       _cardWrapper(_buildInterested()),
                       _cardWrapper(_buildMembers()),
                       _cardWrapper(_buildMaterials()),
                       _cardWrapper(_buildActions(context)),
+
                       const SizedBox(height: 30),
                     ],
                   ),
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
+  // ================= INSIGHTS =================
+
   Widget _buildInsights() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const SectionTitle("Insights da Célula"),
-      const SizedBox(height: 8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle("Insights da Célula"),
+        const SizedBox(height: 8),
 
-      ..._insights.map((insight) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: _getInsightColor(insight.type),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            insight.description,
-            style: const TextStyle(color: Colors.black),
-          ),
-        );
-      }).toList(),
-    ],
-  );
-}
-
-Color _getInsightColor(InsightType type) {
-  switch (type) {
-    case InsightType.alert:
-      return Colors.red.withValues(alpha: 0.1);
-    case InsightType.positive:
-      return Colors.green.withValues(alpha: 0.1);
-    case InsightType.neutral:
-      return Colors.grey.withValues(alpha: 0.1);
+        ..._insights.map((insight) {
+          return InsightCard(
+            insight: insight,
+            onTap: () => _onInsightTap(insight),
+          );
+        }).toList(),
+      ],
+    );
   }
-}
 
   // ================= HEADER =================
 
@@ -351,7 +355,7 @@ Color _getInsightColor(InsightType type) {
                     ),
                   );
 
-                  setState(() => _loadData());
+                  setState(_loadData);
                 },
               ),
             ),
@@ -384,14 +388,14 @@ Color _getInsightColor(InsightType type) {
                     ),
                   );
 
-                  setState(() => _loadData());
+                  setState(_loadData);
                 },
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: ActionButton(
-                icon: Icons.dashboard_rounded, // 🔥 NOVO
+                icon: Icons.dashboard_rounded,
                 label: "Dashboard",
                 onTap: () {
                   Navigator.push(
@@ -400,6 +404,28 @@ Color _getInsightColor(InsightType type) {
                       builder: (_) => DashboardPage(
                         cellId: widget.cell.id,
                       ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // 🔥 NOVO BOTÃO FOLLOW-UP
+        Row(
+          children: [
+            Expanded(
+              child: ActionButton(
+                icon: Icons.checklist_rounded,
+                label: "Follow-ups",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FollowUpPage(),
                     ),
                   );
                 },

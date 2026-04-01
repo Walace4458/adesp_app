@@ -6,6 +6,7 @@ class InsightItem {
   final String title;
   final String description;
   final List<String> relatedPeopleIds;
+  final List<String> relatedNames;
   final InsightActionType actionType;
 
   InsightItem({
@@ -14,5 +15,6 @@ class InsightItem {
     required this.description,
     required this.relatedPeopleIds,
     required this.actionType,
+    required this.relatedNames,
   });
 }

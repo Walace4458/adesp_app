@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/features/More/features/cells/pages/my_cells_page.dart';
+import 'package:flutter_application_1/features/More/features/groups/pages/group_page.dart';
+import 'package:flutter_application_1/features/More/features/id_card/pages/id_card_page.dart';
+
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
 import 'edit_profile_page.dart';
+import '../../my_events/pages/my_event_page.dart';
+import '../../../../notifications/notifications_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -45,13 +50,9 @@ class _ProfilePageState extends State<ProfilePage>
       appBar: AppBar(
         title: const Text("Meu Perfil"),
         actions: [
-
-          // 👁️ BOTÃO COM ANIMAÇÃO
           IconButton(
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) =>
-                  RotationTransition(turns: anim, child: child),
               child: Icon(
                 showData ? Icons.visibility_off : Icons.visibility,
                 key: ValueKey(showData),
@@ -63,8 +64,6 @@ class _ProfilePageState extends State<ProfilePage>
               });
             },
           ),
-
-          // ✏️ EDITAR
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () async {
@@ -87,33 +86,16 @@ class _ProfilePageState extends State<ProfilePage>
 
           const SizedBox(height: 10),
 
-          _buildActions(),
+          _buildActions(), // 🔥 NOVO BLOCO MELHORADO
 
           const SizedBox(height: 10),
 
-          // 🔥 ÁREA ANIMADA
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AnimatedSize(
               duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
-                transitionBuilder: (child, animation) {
-                  final offsetAnimation = Tween<Offset>(
-                    begin: const Offset(0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation);
-
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: offsetAnimation,
-                      child: child,
-                    ),
-                  );
-                },
-
                 child: showData
                     ? Column(
                         key: const ValueKey("dados"),
@@ -140,9 +122,7 @@ class _ProfilePageState extends State<ProfilePage>
                           ]),
                         ],
                       )
-                    : const SizedBox(
-                        key: ValueKey("vazio"),
-                      ),
+                    : const SizedBox(),
               ),
             ),
           ),
@@ -153,7 +133,8 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// HEADER
+  // ================= HEADER =================
+
   Widget _buildHeader() {
     return Stack(
       alignment: Alignment.center,
@@ -206,13 +187,15 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// AÇÕES
+  // ================= ACTIONS (🔥 NOVO) =================
+
   Widget _buildActions() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          _actionItem(Icons.groups, "Minhas Células", () {
+
+          _tile(Icons.groups, "Minhas Células", () {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -220,18 +203,51 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             );
           }),
-          _actionItem(Icons.event, "Meus Eventos", () {
-            print("Ir para eventos");
+
+          _tile(Icons.event, "Meus Eventos", () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MyEventsPage(),
+              ),
+            );
           }),
-          _actionItem(Icons.favorite, "Ministério", () {
-            print("Ir para ministério");
+
+          _tile(Icons.group, "Grupos", () {
+            Navigator.push(context, 
+              MaterialPageRoute(
+                builder: (_) => const GroupsPage(),
+              ),
+            );
+          }),
+
+          _tile(Icons.notifications, "Notificações", () {
+            Navigator.push(context, 
+              MaterialPageRoute(
+                builder: (_) => const NotificationsPage(),
+              )
+            );
+          }),
+
+          _tile(Icons.badge, "Carteirinha", () {
+            Navigator.push(context, 
+              MaterialPageRoute(
+                builder: (_) => const IdCardPage(),
+              )
+            );
+          }),
+
+          _tile(Icons.credit_card, "Meus cartões", () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Cartões em breve")),
+            );
           }),
         ],
       ),
     );
   }
 
-  Widget _actionItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _tile(IconData icon, String title, VoidCallback onTap) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(
@@ -246,14 +262,14 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// SEÇÃO
+  // ================= SECTIONS =================
+
   Widget _buildSection(String title, List<Widget> children) {
     return Card(
       margin: const EdgeInsets.only(bottom: 15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -264,7 +280,6 @@ class _ProfilePageState extends State<ProfilePage>
                 title,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
                 ),
               ),
             ),
@@ -276,7 +291,6 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// ITEM
   Widget _item(String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -287,7 +301,6 @@ class _ProfilePageState extends State<ProfilePage>
             child: Text(
               value?.isNotEmpty == true ? value! : "-",
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
         ],
