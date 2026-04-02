@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/More/features/card/pages/my_card_page.dart';
 import 'package:flutter_application_1/features/More/features/cells/pages/my_cells_page.dart';
 import 'package:flutter_application_1/features/More/features/groups/pages/group_page.dart';
 import 'package:flutter_application_1/features/More/features/id_card/pages/id_card_page.dart';
@@ -238,8 +239,10 @@ class _ProfilePageState extends State<ProfilePage>
           }),
 
           _tile(Icons.credit_card, "Meus cartões", () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Cartões em breve")),
+            Navigator.push(context, 
+              MaterialPageRoute(
+                builder: (_) => MyCardsPage(),
+              )
             );
           }),
         ],

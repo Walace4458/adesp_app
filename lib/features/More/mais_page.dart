@@ -4,6 +4,7 @@ import 'package:flutter_application_1/features/More/features/bible/ui/bible_book
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_favorites_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/bible_reader_page.dart';
 import 'package:flutter_application_1/features/More/features/bible/ui/reading_page.dart';
+import 'package:flutter_application_1/features/More/features/contact/pages/contact_page.dart';
 import 'package:flutter_application_1/features/More/features/contribution/pages/contribution_page.dart';
 import 'package:flutter_application_1/features/More/features/profile/pages/profile_page.dart';
 import 'package:flutter_application_1/features/More/features/testimonies/ui/testimonies/testimonies_page.dart';
@@ -12,7 +13,6 @@ import 'package:flutter_application_1/features/More/features/testimonies/ui/test
 import '../More/models/more_option.dart';
 import '../More/ui/pages/widgets/more_option_tile.dart';
 import '../More/ui/pages/prayer_requests_page.dart';
-import '../More/ui/pages/contact_page.dart';
 
 class MaisPage extends StatelessWidget{
   const MaisPage({super.key});
