@@ -9,12 +9,15 @@ class GabineteSlot {
 
   Duration get duration => endExclusive.difference(start);
 
-  String get key => '${start.toIso8601String()}_${endExclusive.toIso8601String()}';
+  String get key =>
+      '${start.toIso8601String()}_${endExclusive.toIso8601String()}';
+
+  bool get isPast => start.isBefore(DateTime.now());
 
   Map<String, dynamic> toJson() => {
-    'start': start.toIso8601String(),
-    'endExclusive': endExclusive.toIso8601String(),
-  };
+        'start': start.toIso8601String(),
+        'endExclusive': endExclusive.toIso8601String(),
+      };
 
   static GabineteSlot fromJson(Map<String, dynamic> json) {
     return GabineteSlot(

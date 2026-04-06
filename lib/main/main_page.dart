@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../features/agenda/agenda_page.dart';
-import '../features/gabinete/gabinete_page.dart';
+import '../features/gabinete/page/gabinete_page.dart';
 import '../features/home/home_page.dart';
 import '../features/More/mais_page.dart';
 import '../features/midiapage/midia_page.dart';
