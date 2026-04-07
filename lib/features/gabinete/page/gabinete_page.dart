@@ -58,7 +58,7 @@ class _GabinetePageState extends State<GabinetePage> {
     return SafeArea(
       child: Column(
         children: [
-          // 🔥 CALENDÁRIO COM ALTURA FIXA
+          // 📅 CALENDÁRIO
           SizedBox(
             height: 320,
             child: GabineteCalendar(
@@ -86,11 +86,10 @@ class _GabinetePageState extends State<GabinetePage> {
                 Text(
                   isAvailableDay
                       ? 'Dia disponível'
-                      : 'Sem gabinete',
+                      : 'Gabinetes apenas Terça e Quinta',
                   style: TextStyle(
-                    color: isAvailableDay
-                        ? Colors.green
-                        : Colors.red,
+                    color:
+                        isAvailableDay ? Colors.green : Colors.red,
                   ),
                 ),
               ],
@@ -99,21 +98,20 @@ class _GabinetePageState extends State<GabinetePage> {
 
           const SizedBox(height: 10),
 
-          // 🔥 CONTEÚDO FLEXÍVEL (AGORA SIM PODE EXPANDED)
+          // ⏰ CONTEÚDO
           Expanded(
             child: isAvailableDay
                 ? GabineteTimeSlots(
                     slots: slots,
                     onSelectSlot: (slot) async {
                       final ok = controller.selectSlot(slot);
-
                       if (!ok) return;
 
-                      final result = await showModalBottomSheet(
+                      final result = await showModalBottomSheet<bool>(
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (_) => GabineteBottomSheet(
+                        builder: (ctx) => GabineteBottomSheet(
                           onConfirm: ({
                             required String name,
                             required String phone,
@@ -128,18 +126,19 @@ class _GabinetePageState extends State<GabinetePage> {
                               note: note,
                             );
 
-                            if (!mounted) return;
+                            if (!ctx.mounted) return;
 
-                            Navigator.pop(context);
+                            Navigator.pop(ctx, true); // ✅ CONFIRMOU
                           },
                           onCancel: () {
-                            controller.cancelSelection();
-                            Navigator.pop(context);
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx, false); // ✅ CANCELOU
                           },
                         ),
                       );
 
-                      if (result == null) {
+                      // 🔥 CONTROLE CENTRALIZADO (SEM BUG)
+                      if (result != true) {
                         controller.cancelSelection();
                       }
                     },

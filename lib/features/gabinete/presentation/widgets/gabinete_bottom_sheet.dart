@@ -39,211 +39,220 @@ class _GabineteBottomSheetState extends State<GabineteBottomSheet> {
   bool isLoading = false;
 
   // =========================
-  // 📱 FORMATA TELEFONE BR
+  // 📱 FORMATADOR TELEFONE
   // =========================
   void _formatPhone(String value) {
     final numbers = value.replaceAll(RegExp(r'[^0-9]'), '');
 
-    String formatted = numbers;
+    final limited =
+        numbers.length > 11 ? numbers.substring(0, 11) : numbers;
 
-    if (numbers.length >= 2) {
-      formatted = '(${numbers.substring(0, 2)})';
+    String formatted = '';
+
+    if (limited.isNotEmpty) formatted += '(';
+
+    if (limited.length >= 2) {
+      formatted += '${limited.substring(0, 2)}) ';
+    } else {
+      formatted += limited;
     }
-    if (numbers.length >= 7) {
-      formatted += ' ${numbers.substring(2, 7)}';
+
+    if (limited.length > 2) {
+      if (limited.length >= 7) {
+        formatted += limited.substring(2, 7);
+      } else {
+        formatted += limited.substring(2);
+      }
     }
-    if (numbers.length >= 11) {
-      formatted += '-${numbers.substring(7, 11)}';
+
+    if (limited.length >= 8) {
+      formatted += '-${limited.substring(7)}';
     }
 
     phoneController.value = TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(
+        offset: formatted.length,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: MediaQuery.of(context).size.height * 0.85, // 🔥 FIXA ALTURA
       decoration: const BoxDecoration(
         color: Color(0xFF121212),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // =========================
-              // HANDLE
-              // =========================
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          children: [
+            // HANDLE
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Text(
+              'Agendar Gabinete',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔥 SCROLL CONTROLADO
+            Expanded(
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      _input(
+                        controller: nameController,
+                        label: 'Nome completo',
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Obrigatório';
+                          }
+                          if (v.trim().length < 3) {
+                            return 'Nome muito curto';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      _input(
+                        controller: phoneController,
+                        label: 'Telefone (WhatsApp)',
+                        keyboardType: TextInputType.phone,
+                        onChanged: _formatPhone,
+                        validator: (v) {
+                          if (v == null || v.length < 15) {
+                            return 'Telefone inválido';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      // 🔥 DROPDOWN CORRIGIDO
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DropdownButtonFormField<String>(
+                          onTap: () {
+                            FocusScope.of(context).unfocus(); // 🔥 FECHA TECLADO
+                          },
+                          dropdownColor: const Color(0xFF1E1E1E),
+                          style: const TextStyle(color: Colors.white),
+                          value: selectedCategory,
+                          items: categories
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(e),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => selectedCategory = v),
+                          decoration: _decoration('Motivo'),
+                          validator: (v) =>
+                              v == null ? 'Selecione um motivo' : null,
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TextFormField(
+                          controller: noteController,
+                          maxLength: 500,
+                          maxLines: 3,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: _decoration('Resumo').copyWith(
+                            hintText: 'Descreva brevemente...',
+                            hintStyle:
+                                const TextStyle(color: Colors.white54),
+                            counterStyle:
+                                const TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
-              const Text(
-                'Agendar Gabinete',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+            // BOTÃO FIXO
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
-              ),
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        if (!_formKey.currentState!.validate()) return;
 
-              const SizedBox(height: 16),
+                        setState(() => isLoading = true);
 
-              // =========================
-              // NOME
-              // =========================
-              _input(
-                controller: nameController,
-                label: 'Nome completo',
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'Obrigatório';
-                  }
-                  if (v.trim().length < 3) {
-                    return 'Nome muito curto';
-                  }
-                  return null;
-                },
-              ),
+                        await widget.onConfirm(
+                          name: nameController.text.trim(),
+                          phone: phoneController.text.trim(),
+                          categoryId: selectedCategory!,
+                          note: noteController.text.trim(),
+                        );
 
-              // =========================
-              // TELEFONE
-              // =========================
-              _input(
-                controller: phoneController,
-                label: 'Telefone (WhatsApp)',
-                keyboardType: TextInputType.phone,
-                onChanged: _formatPhone,
-                validator: (v) {
-                  if (v == null || v.length < 14) {
-                    return 'Telefone inválido';
-                  }
-                  return null;
-                },
-              ),
-
-              // =========================
-              // CATEGORIA
-              // =========================
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<String>(
-                  dropdownColor: const Color(0xFF1E1E1E),
-                  style: const TextStyle(color: Colors.white),
-                  value: selectedCategory,
-                  items: categories
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e),
+                        if (mounted) {
+                          setState(() => isLoading = false);
+                        }
+                      },
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
                       )
-                      .toList(),
-                  onChanged: (v) => setState(() => selectedCategory = v),
-                  decoration: _decoration('Motivo'),
-                  validator: (v) =>
-                      v == null ? 'Selecione um motivo' : null,
-                ),
+                    : const Text('Confirmar'),
               ),
+            ),
 
-              // =========================
-              // RESUMO
-              // =========================
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TextFormField(
-                  controller: noteController,
-                  maxLength: 500,
-                  maxLines: 3,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _decoration('Resumo').copyWith(
-                    hintText: 'Descreva brevemente...',
-                    hintStyle:
-                        const TextStyle(color: Colors.white38),
-                    counterStyle:
-                        const TextStyle(color: Colors.white54),
-                  ),
-                ),
+            TextButton(
+              onPressed: isLoading ? null : widget.onCancel,
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.white),
               ),
-
-              const SizedBox(height: 10),
-
-              // =========================
-              // BOTÃO CONFIRMAR
-              // =========================
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          if (!_formKey.currentState!.validate()) return;
-
-                          setState(() => isLoading = true);
-
-                          await widget.onConfirm(
-                            name: nameController.text.trim(),
-                            phone: phoneController.text.trim(),
-                            categoryId: selectedCategory!,
-                            note: noteController.text.trim(),
-                          );
-
-                          if (mounted) {
-                            Navigator.pop(context);
-                          }
-                        },
-                  child: isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
-                        )
-                      : const Text('Confirmar'),
-                ),
-              ),
-
-              // =========================
-              // CANCELAR
-              // =========================
-              TextButton(
-                onPressed: () {
-                  widget.onCancel();
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // =========================
-  // INPUT PADRÃO
-  // =========================
   Widget _input({
     required TextEditingController controller,
     required String label,
@@ -264,19 +273,16 @@ class _GabineteBottomSheetState extends State<GabineteBottomSheet> {
     );
   }
 
-  // =========================
-  // DECORATION PADRÃO
-  // =========================
   InputDecoration _decoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
+      labelStyle: const TextStyle(color: Colors.white),
       enabledBorder: OutlineInputBorder(
         borderSide: const BorderSide(color: Colors.white24),
         borderRadius: BorderRadius.circular(10),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(color: Colors.purple),
+        borderSide: const BorderSide(color: Colors.deepPurple),
         borderRadius: BorderRadius.circular(10),
       ),
     );

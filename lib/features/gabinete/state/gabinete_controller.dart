@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/gabinete_slot.dart';
 import '../models/gabinete_request.dart';
 import '../models/gabinete_enums.dart';
-import '../models/gabinete_ids.dart'; // 👈 IMPORTANTE (IDs tipados)
+import '../models/gabinete_ids.dart';
 import 'gabinete_state.dart';
 
 class GabineteController extends ChangeNotifier {
@@ -16,15 +16,63 @@ class GabineteController extends ChangeNotifier {
   }
 
   // =========================
+  // CONFIG
+  // =========================
+  static const int maxAppointmentsPerDay = 6;
+
+  // =========================
   // INIT
   // =========================
   Future<void> init() async {}
 
   // =========================
-  // LOAD RANGE (mock)
+  // MOCK DATA (SIMULA BANCO)
+  // =========================
+  List<GabineteRequest> _mockRequestsForDay(DateTime day) {
+    DateTime at(int h) => DateTime(day.year, day.month, day.day, h);
+
+    // 👇 simula alguns horários já ocupados
+    return [
+      GabineteRequest(
+        id: GabineteRequestId('1'),
+        slot: GabineteSlot(start: at(9), endExclusive: at(10)),
+        memberId: GabineteMemberId('user1'),
+        createdByUserId: 'user1',
+        categoryId: 'Aconselhamento',
+        memberNameSnapshot: 'João',
+        whatsappSnapshot: '21999999999',
+        assignmentPolicy: GabineteAssignmentPolicy.adminDecides,
+        status: GabineteRequestStatus.confirmed,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        note: null,
+      ),
+      GabineteRequest(
+        id: GabineteRequestId('2'),
+        slot: GabineteSlot(start: at(14), endExclusive: at(15)),
+        memberId: GabineteMemberId('user2'),
+        createdByUserId: 'user2',
+        categoryId: 'Oração',
+        memberNameSnapshot: 'Maria',
+        whatsappSnapshot: '21988888888',
+        assignmentPolicy: GabineteAssignmentPolicy.adminDecides,
+        status: GabineteRequestStatus.pendingAdminApproval,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        note: null,
+      ),
+    ];
+  }
+
+  // =========================
+  // LOAD RANGE
   // =========================
   Future<void> loadRange(DateTime start, DateTime end) async {
-    _setState(_state.copyWith(rangeRequests: []));
+    final requests = _mockRequestsForDay(start);
+
+    _setState(
+      _state.copyWith(rangeRequests: requests),
+    );
   }
 
   // =========================
@@ -64,11 +112,30 @@ class GabineteController extends ChangeNotifier {
   }
 
   // =========================
+  // MÉTRICAS
+  // =========================
+  int getTotalAppointmentsForDay() {
+    return _state.rangeRequests.where((r) {
+      return r.status == GabineteRequestStatus.confirmed ||
+          r.status == GabineteRequestStatus.pendingAdminApproval;
+    }).length;
+  }
+
+  int getRemainingSlotsForDay() {
+    return maxAppointmentsPerDay - getTotalAppointmentsForDay();
+  }
+
+  bool isDayFull() {
+    return getRemainingSlotsForDay() <= 0;
+  }
+
+  // =========================
   // SELEÇÃO
   // =========================
   bool selectSlot(GabineteSlot slot) {
     if (isSlotInPast(slot)) return false;
     if (isSlotBlockedByRangeRequests(slot.key)) return false;
+    if (isDayFull()) return false;
 
     _setState(
       _state.copyWith(
@@ -90,7 +157,7 @@ class GabineteController extends ChangeNotifier {
   }
 
   // =========================
-  // SUBMIT REQUEST (DDD CORRETO)
+  // SUBMIT REQUEST
   // =========================
   Future<void> submitRequest({
     required String userId,
@@ -108,39 +175,35 @@ class GabineteController extends ChangeNotifier {
       return;
     }
 
+    if (isDayFull()) {
+      _setState(_state.copyWith(
+        errorMessage: 'Dia já está lotado',
+      ));
+      return;
+    }
+
     try {
       final now = DateTime.now();
 
       final request = GabineteRequest(
-        // ✅ IDs tipados
         id: GabineteRequestId(now.millisecondsSinceEpoch.toString()),
-
         slot: slot,
-
         memberId: GabineteMemberId(userId),
-
         createdByUserId: userId,
-
         categoryId: categoryId,
-
-        // ✅ snapshots
         memberNameSnapshot: name,
         whatsappSnapshot: whatsapp,
-
-        // ✅ política padrão (ajusta se tiver outra)
         assignmentPolicy: GabineteAssignmentPolicy.adminDecides,
-
         status: GabineteRequestStatus.pendingAdminApproval,
-
         createdAt: now,
         updatedAt: now,
-
         note: note,
       );
 
       _setState(
         _state.copyWith(
           myRequests: [request, ..._state.myRequests],
+          rangeRequests: [request, ..._state.rangeRequests], // 🔥 ATUALIZA NA HORA
           selectedSlot: null,
           holdStart: null,
         ),
