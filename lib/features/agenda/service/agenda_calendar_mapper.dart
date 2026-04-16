@@ -7,7 +7,11 @@ class AgendaCalendarMapper {
     final map = <DateTime, List<AgendaEvent>>{};
     for (final e in events) {
       final key = dateOnly(e.startAt);
-      (map[key] ??= <AgendaEvent>[]).add(e);
+      if (!map.containsKey(key)) {
+        map[key] = [];
+      }
+
+      map[key]!.add(e);
     }
 
     for (final entry in map.entries) {

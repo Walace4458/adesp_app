@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_application_1/features/agenda/models/agenda_event.dart';
-import 'package:flutter_application_1/features/agenda/service/agenda_actions_service.dart';
 
 class AgendaEventDetailsSheet extends StatefulWidget {
   final AgendaEvent event;
-  final AgendaActionsService actions;
   final bool isConfirmed;
   final VoidCallback? onPresenceConfirmed;
 
@@ -13,7 +11,6 @@ class AgendaEventDetailsSheet extends StatefulWidget {
     super.key,
     required this.event,
     required this.isConfirmed,
-    this.actions = const AgendaActionsService(),
     this.onPresenceConfirmed,
   });
 
@@ -21,7 +18,6 @@ class AgendaEventDetailsSheet extends StatefulWidget {
     BuildContext context, {
     required AgendaEvent event,
     required bool isConfirmed,
-    AgendaActionsService actions = const AgendaActionsService(),
     VoidCallback? onPresenceConfirmed,
   }) {
     return showModalBottomSheet<void>(
@@ -32,7 +28,6 @@ class AgendaEventDetailsSheet extends StatefulWidget {
         child: AgendaEventDetailsSheet(
           event: event,
           isConfirmed: isConfirmed,
-          actions: actions,
           onPresenceConfirmed: onPresenceConfirmed,
         ),
       ),
@@ -46,7 +41,6 @@ class AgendaEventDetailsSheet extends StatefulWidget {
 
 class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
   bool _confirmLoading = false;
-  bool _calendarLoading = false;
 
   Color _alpha(Color c, double opacity) {
     final a = (opacity * 255).round().clamp(0, 255);
@@ -80,17 +74,6 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
   String _formatTime(DateTime d) =>
       '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
 
-  String _categoryLabel(AgendaCategory c) {
-    switch (c) {
-      case AgendaCategory.culto: return 'Culto';
-      case AgendaCategory.jovens: return 'Jovens';
-      case AgendaCategory.celula: return 'Célula';
-      case AgendaCategory.evento: return 'Evento';
-      case AgendaCategory.ensaio: return 'Ensaio';
-      case AgendaCategory.outro: return 'Outro';
-    }
-  }
-
   void _snack(String msg) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -100,9 +83,6 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
   @override
   Widget build(BuildContext context) {
     final e = widget.event;
-
-    final hasDesc = e.description.trim().isNotEmpty;
-    final hasBanner = (e.bannerUrl ?? '').trim().isNotEmpty;
 
     return SafeArea(
       top: false,
@@ -125,6 +105,7 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
+
             const SizedBox(height: 14),
 
             Flexible(
@@ -132,20 +113,6 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
-                    if (hasBanner) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: AspectRatio(
-                          aspectRatio: 16/9,
-                          child: Image.network(
-                            e.bannerUrl!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
 
                     Text(
                       e.title,
@@ -163,72 +130,12 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
                       children: [
                         _Pill(text: '${_dowShortPt(e.startAt)} • ${_formatDayMonth(e.startAt)}'),
                         _Pill(text: _formatTime(e.startAt)),
-                        _Pill(text: _categoryLabel(e.category)),
                       ],
                     ),
 
-                    const SizedBox(height: 16),
-
-                    if (e.location.trim().isNotEmpty)
-                      _InfoRow(icon: Icons.place_rounded, text: e.location),
-
-                    if (hasDesc) ...[
-                      const SizedBox(height: 16),
-                      Text(
-                        'Sobre',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: ColorStyle.textoPrincipal,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _alpha(ColorStyle.fundoSuperficie, .6),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          e.description,
-                          style: TextStyle(
-                            color: ColorStyle.textoPrincipal,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-
                     const SizedBox(height: 22),
 
-                    Divider(color: _alpha(ColorStyle.textoSecundario, .15)),
-
-                    const SizedBox(height: 16),
-
-                    _ActionButton(
-                      icon: Icons.ios_share_rounded,
-                      label: 'Compartilhar',
-                      onTap: () => widget.actions.shareEvent(context, e),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    _ActionButton(
-                      icon: Icons.event_available_rounded,
-                      label: _calendarLoading
-                          ? 'Adicionando...'
-                          : 'Adicionar ao calendário',
-                      onTap: _calendarLoading ? null : () async {
-                        setState(() => _calendarLoading = true);
-                        await widget.actions.addToCalendar(e);
-                        if (mounted) {
-                          setState(() => _calendarLoading = false);
-                          _snack('Em breve: integração com calendário.');
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 10),
-
+                    // 🔥 BOTÃO CORRIGIDO
                     _ActionButton(
                       icon: Icons.check_circle_rounded,
                       label: widget.isConfirmed
@@ -240,24 +147,22 @@ class _AgendaEventDetailsSheetState extends State<AgendaEventDetailsSheet> {
                           ? null
                           : () async {
                               setState(() => _confirmLoading = true);
-                              final ok = await widget.actions.confirmPresence(e);
-                              if (!mounted) return;
 
-                              if (ok) {
-                                widget.onPresenceConfirmed?.call();
+                              try {
+                                 widget.onPresenceConfirmed?.call();
+
+                                if (!mounted) return;
+
+                                _snack('Presença confirmada!');
                                 Navigator.pop(context);
-                              } else {
-                                _snack('Não foi possível confirmar.');
+                              } catch (e) {
+                                _snack('Erro ao confirmar presença');
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _confirmLoading = false);
+                                }
                               }
                             },
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    _ActionButton(
-                      icon: Icons.payments_rounded,
-                      label: 'Pagamento (em breve)',
-                      onTap: null,
                     ),
 
                     const SizedBox(height: 10),
@@ -319,32 +224,6 @@ class _Pill extends StatelessWidget {
           color: ColorStyle.textoSecundario,
         ),
       ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InfoRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: ColorStyle.textoSecundario),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: ColorStyle.textoPrincipal,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

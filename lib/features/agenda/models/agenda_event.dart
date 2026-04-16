@@ -18,6 +18,7 @@ class AgendaEvent {
   final bool isFeatured;
   final String? bannerUrl;
   final String? link;
+  final String? imageUrl;
 
   const AgendaEvent({
     required this.id,
@@ -30,5 +31,6 @@ class AgendaEvent {
     this.isFeatured = false,
     this.bannerUrl,
     this.link,
+    this.imageUrl,
   });
 }

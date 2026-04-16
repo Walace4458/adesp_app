@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_application_1/core/theme/app_colors.dart';
-import 'package:flutter_application_1/features/agenda/data/agenda_repository.dart';
-import 'package:flutter_application_1/features/agenda/data/mock_agenda_repository.dart';
 import 'package:flutter_application_1/features/agenda/models/agenda_event.dart';
+import 'package:flutter_application_1/features/agenda/service/agenda_presence_store.dart';
 import 'package:flutter_application_1/features/agenda/ui/sheets/agenda_month_sheet.dart';
 import 'package:flutter_application_1/features/agenda/ui/sheets/agenda_event_datails_sheet.dart';
-
 import 'package:flutter_application_1/features/agenda/service/agenda_interest_service.dart';
 import 'package:flutter_application_1/features/agenda/service/agenda_interest_store.dart';
+import 'package:flutter_application_1/features/agenda/service/agenda_service.dart';
+import 'package:flutter_application_1/features/agenda/service/agenda_presence_service.dart';
 
 class AgendaPage extends StatefulWidget {
   const AgendaPage({super.key});
@@ -18,291 +17,202 @@ class AgendaPage extends StatefulWidget {
 }
 
 class _AgendaPageState extends State<AgendaPage> {
-  final AgendaRepository _repo = MockAgendaRepository();
+  final _presenceStore = AgendaPresenceStore();
+  Set<String> _confirmedIds = <String>{};
 
-  final Set<String> _confirmedIds = <String>{};
+  final _presenceService = const AgendaPresenceService();
 
-void _openDetails(AgendaEvent e) {
-  AgendaEventDetailsSheet.show(
-    context,
-    event: e,
-    isConfirmed: _confirmedIds.contains(e.id),
-    onPresenceConfirmed: () {
-      setState(() => _confirmedIds.add(e.id));
-      _snack('Presença confirmada!');
-    },
-  );
-}
-
-  // ✅ agora buscamos por RANGE (sem fetchEvents)
-  late Future<List<AgendaEvent>> _futureWeek;
-  late Future<List<AgendaEvent>> _futureFeaturedBase;
-
-  int _weekOffset = 0; // 0 semana atual, -1 passada, +1 próxima
-
-  // ❤️ Interesse (local + backend)
   final _interestStore = AgendaInterestStore();
   final _interestService = const AgendaInterestService();
 
   Set<String> _interestedIds = <String>{};
-  bool _interestLoaded = false;
+
+  late Future<_AgendaCache> _futureCache;
+
+  int _weekOffset = 0;
 
   @override
   void initState() {
     super.initState();
-
-    _loadFutures();
+    _reload();
 
     _interestStore.load().then((ids) {
       if (!mounted) return;
-      setState(() {
-        _interestedIds = ids;
-        _interestLoaded = true;
-      });
+      setState(() => _interestedIds = ids);
+    });
+
+    _presenceStore.load().then((ids){
+      if (!mounted) return;
+      setState(() => _confirmedIds = ids);
     });
   }
 
-  // ✅ centraliza as chamadas ao repo
-  void _loadFutures() {
-    final now = DateTime.now();
+  // =========================
+  // CACHE
+  // =========================
+  Future<_AgendaCache> _fetchCache() async {
+    final data = await AgendaService.getAgenda();
 
-    final weekStart =
-        _startOfWeekSunday(now).add(Duration(days: 7 * _weekOffset));
-    final weekEndExclusive = _endOfWeekExclusive(weekStart);
+    final events = data.map<AgendaEvent>((e) {
+      final title = e['titulo'] ?? '';
 
-    // Base para "Em destaque" + MonthSheet (ajuste se quiser)
-    final featuredStart = DateTime(now.year, now.month, now.day);
-    final featuredEndExclusive = featuredStart.add(const Duration(days: 180));
+      return AgendaEvent(
+        id: e['id'].toString(),
+        title: title,
+        startAt: DateTime.parse(e['data']).toLocal(),
+        location: e['local'] ?? 'Igreja',
+        description: e['descricao'] ?? '',
+        category: _mapCategory(title),
+        isFeatured: e['is_featured'] == true,
+        imageUrl: e['image_url'],
+      );
+    }).toList();
 
-    _futureWeek = _repo.fetchEventsInRange(weekStart, weekEndExclusive);
-    _futureFeaturedBase =
-        _repo.fetchEventsInRange(featuredStart, featuredEndExclusive);
+    return _AgendaCache(events);
   }
 
   void _reload() {
-    setState(() {
-      _loadFutures();
-    });
+    _futureCache = _fetchCache();
+    setState(() {});
   }
 
-  void _goPrevWeek() => setState(() {
-        _weekOffset -= 1;
-        _loadFutures();
-      });
+  // =========================
+  // FILTERS
+  // =========================
+  List<AgendaEvent> _weekEvents(List<AgendaEvent> all) {
+    final now = DateTime.now();
+    final start =
+        _startOfWeekSunday(now).add(Duration(days: 7 * _weekOffset));
+    final end = _endOfWeekExclusive(start);
 
-  void _goNextWeek() => setState(() {
-        _weekOffset += 1;
-        _loadFutures();
-      });
-
-  void _goThisWeek() => setState(() {
-        _weekOffset = 0;
-        _loadFutures();
-      });
-
-  // ---- helpers sem withOpacity (usa alpha)
-  Color _alpha(Color c, double opacity) {
-    final a = (opacity * 255).round().clamp(0, 255);
-    return c.withAlpha(a);
+    return all
+        .where((e) => e.startAt.isAfter(start) && e.startAt.isBefore(end))
+        .toList();
   }
 
-  // semana começa em DOMINGO
-  DateTime _startOfWeekSunday(DateTime date) {
-    final d = DateTime(date.year, date.month, date.day);
-    final daysSinceSunday = d.weekday % 7; // dom=0, seg=1 ... sáb=6
-    return d.subtract(Duration(days: daysSinceSunday));
-  }
-
-  DateTime _endOfWeekExclusive(DateTime startOfWeek) {
-    return startOfWeek.add(const Duration(days: 7));
-  }
-
-  // ✅ não precisa mais do _eventsInRange (o repo já entrega filtrado por semana)
   List<AgendaEvent> _featured(List<AgendaEvent> all) {
     final f = all.where((e) => e.isFeatured).toList();
     f.sort((a, b) => a.startAt.compareTo(b.startAt));
     return f;
   }
 
-  String _dowShortPt(DateTime d) {
-    switch (d.weekday) {
-      case DateTime.monday:
-        return 'SEG';
-      case DateTime.tuesday:
-        return 'TER';
-      case DateTime.wednesday:
-        return 'QUA';
-      case DateTime.thursday:
-        return 'QUI';
-      case DateTime.friday:
-        return 'SEX';
-      case DateTime.saturday:
-        return 'SÁB';
-      case DateTime.sunday:
-        return 'DOM';
-      default:
-        return '';
-    }
-  }
-
-  String _monthShortPt(int month) {
-    const m = [
-      'jan',
-      'fev',
-      'mar',
-      'abr',
-      'mai',
-      'jun',
-      'jul',
-      'ago',
-      'set',
-      'out',
-      'nov',
-      'dez'
-    ];
-    return m[month - 1];
-  }
-
-  String _formatDayMonth(DateTime d) => '${d.day} ${_monthShortPt(d.month)}';
-
-  String _formatTime(DateTime d) {
-    final hh = d.hour.toString().padLeft(2, '0');
-    final mm = d.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
-
-  String _rangeLabel(DateTime start, DateTime endInclusive) {
-    return '${_dowShortPt(start)}, ${_formatDayMonth(start)} — '
-        '${_dowShortPt(endInclusive)}, ${_formatDayMonth(endInclusive)}';
-  }
-
-  String _categoryLabel(AgendaCategory c) {
-    switch (c) {
-      case AgendaCategory.culto:
-        return 'Culto';
-      case AgendaCategory.jovens:
-        return 'Jovens';
-      case AgendaCategory.celula:
-        return 'Célula';
-      case AgendaCategory.evento:
-        return 'Evento';
-      case AgendaCategory.ensaio:
-        return 'Ensaio';
-      case AgendaCategory.outro:
-        return 'Outro';
-    }
-  }
-
-  void _snack(String msg) {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  TextStyle _sectionTitleStyle(BuildContext context) {
-    final base = Theme.of(context).textTheme.titleMedium;
-    return (base ?? const TextStyle()).copyWith(
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      color: ColorStyle.textoPrincipal,
-    );
-  }
+  // =========================
+  // WEEK NAV
+  // =========================
+  void _goPrevWeek() => setState(() => _weekOffset--);
+  void _goNextWeek() => setState(() => _weekOffset++);
 
   // =========================
-  // ❤️ Toggle do interesse
+  // INTERACTIONS
   // =========================
-  Future<void> _toggleInterest(String eventId) async {
-    if (!_interestLoaded) return;
+  bool _isInterested(String id) => _interestedIds.contains(id);
 
-    final wasInterested = _interestedIds.contains(eventId);
-    final newInterested = !wasInterested;
+  Future<void> _toggleInterest(String id) async {
+    final now = !_interestedIds.contains(id);
 
-    // 1) muda na hora (UX)
     setState(() {
-      if (newInterested) {
-        _interestedIds.add(eventId);
-      } else {
-        _interestedIds.remove(eventId);
-      }
+      now ? _interestedIds.add(id) : _interestedIds.remove(id);
     });
 
-    // 2) salva local (persistência)
     await _interestStore.save(_interestedIds);
-
-    // 3) backend (stub hoje)
-    final ok = await _interestService.setInterested(
-      eventId: eventId,
-      interested: newInterested,
-    );
-
-    // 4) se falhar, reverte
-    if (!ok && mounted) {
-      setState(() {
-        if (wasInterested) {
-          _interestedIds.add(eventId);
-        } else {
-          _interestedIds.remove(eventId);
-        }
-      });
-      await _interestStore.save(_interestedIds);
-      _snack('Não foi possível salvar seu interesse.');
-    }
+    await _interestService.setInterested(eventId: id, interested: now);
   }
 
-  bool _isInterested(String eventId) => _interestedIds.contains(eventId);
+  void _openDetails(AgendaEvent e) {
+    AgendaEventDetailsSheet.show(
+      context,
+      event: e,
+      isConfirmed: _confirmedIds.contains(e.id),
+      onPresenceConfirmed: () async {
+        final alreadyConfirmed = _confirmedIds.contains(e.id);
+      
+      try {
+        await _presenceService.setPresenca(
+          eventId: e.id,
+          confirmed: !alreadyConfirmed,
+        );
 
+        setState(() {
+          alreadyConfirmed
+            ? _confirmedIds.remove(e.id)
+            : _confirmedIds.add(e.id);
+        });
+
+        await _presenceStore.save(_confirmedIds);
+      } catch (err) {
+        print('ERRO PRESENÇA: $err');
+      }});
+  }
+
+  // =========================
+  // HELPERS
+  // =========================
+  DateTime _startOfWeekSunday(DateTime d) {
+    final date = DateTime(d.year, d.month, d.day);
+    return date.subtract(Duration(days: d.weekday % 7));
+  }
+
+  DateTime _endOfWeekExclusive(DateTime start) =>
+      start.add(const Duration(days: 7));
+
+  String _formatTime(DateTime d) =>
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+
+  String _dowShortPt(DateTime d) {
+    const days = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+    return days[d.weekday % 7];
+  }
+
+  String _monthShort(int m) => [
+        'jan','fev','mar','abr','mai','jun',
+        'jul','ago','set','out','nov','dez'
+      ][m - 1];
+
+  String _formatDayMonth(DateTime d) =>
+      '${d.day} ${_monthShort(d.month)}';
+
+  String _rangeLabel(DateTime a, DateTime b) =>
+      '${_dowShortPt(a)}, ${_formatDayMonth(a)} — '
+      '${_dowShortPt(b)}, ${_formatDayMonth(b)}';
+
+  AgendaCategory _mapCategory(String title) {
+    final t = title.toLowerCase();
+
+    if (t.contains('culto')) return AgendaCategory.culto;
+    if (t.contains('jovem')) return AgendaCategory.jovens;
+    if (t.contains('célula')) return AgendaCategory.celula;
+    if (t.contains('ensaio')) return AgendaCategory.ensaio;
+
+    return AgendaCategory.evento;
+  }
+
+  // =========================
+  // BUILD
+  // =========================
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final baseWeekStart =
-        _startOfWeekSunday(now).add(Duration(days: 7 * _weekOffset));
-    final baseWeekEndExclusive = _endOfWeekExclusive(baseWeekStart);
-    final baseWeekEndInclusive =
-        baseWeekEndExclusive.subtract(const Duration(days: 1));
-
-    // ✅ tipado corretamente
-    final combinedFuture = Future.wait<List<AgendaEvent>>([
-      _futureWeek,
-      _futureFeaturedBase,
-    ]);
-
-    return FutureBuilder<List<List<AgendaEvent>>>(
-      future: combinedFuture,
+    return FutureBuilder<_AgendaCache>(
+      future: _futureCache,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return  Scaffold(
-            appBar: AppBar(title: Text('Agenda')),
+        if (!snapshot.hasData) {
+          return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(title: Text('Agenda')),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Não foi possível carregar a agenda.'),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _reload,
-                      child: const Text('Tentar novamente'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
+        final all = snapshot.data!.events;
+        final featured = _featured(all);
+        final week = _weekEvents(all);
 
-        final weekEvents = (snapshot.data?[0] ?? const <AgendaEvent>[]);
-        final featuredBase = (snapshot.data?[1] ?? const <AgendaEvent>[]);
-        final featured = _featured(featuredBase);
+        final now = DateTime.now();
+        final start =
+            _startOfWeekSunday(now).add(Duration(days: 7 * _weekOffset));
+        final end = _endOfWeekExclusive(start);
 
         return Scaffold(
+          // =========================
+          // 🔥 APPBAR RESTAURADA
+          // =========================
           appBar: AppBar(
             title: const Text('Agenda'),
             actions: [
@@ -310,20 +220,23 @@ void _openDetails(AgendaEvent e) {
                 tooltip: 'Calendário do mês',
                 icon: const Icon(Icons.calendar_month_rounded),
                 onPressed: () {
+                  if (!mounted) return;
+
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
+                    useSafeArea: true,
                     backgroundColor: ColorStyle.fundoPrincipal,
                     shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(18)),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
                     ),
-                    builder: (_) {
+                    builder: (ctx) {
                       return AgendaMonthSheet(
-                        // ✅ agora não temos "all" global, então passamos a base
-                        allEvents: featuredBase,
+                        allEvents: all,
                         onEventTap: (event) {
-                          Navigator.pop(context);
+                          Navigator.pop(ctx);
                           _openDetails(event);
                         },
                       );
@@ -333,96 +246,146 @@ void _openDetails(AgendaEvent e) {
               ),
             ],
           ),
+
           body: RefreshIndicator(
             onRefresh: () async => _reload(),
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // ====== DESTAQUES ======
                 if (featured.isNotEmpty) ...[
-                  Text('Em destaque', style: _sectionTitleStyle(context)),
+                  const Text(
+                    'Em destaque',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 12),
+
                   SizedBox(
                     height: 190,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: featured.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
-                      itemBuilder: (context, index) {
-                        final e = featured[index];
-                        final liked = _isInterested(e.id);
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: 12),
+                      itemBuilder: (_, i) {
+                        final e = featured[i];
 
-                        return _FeaturedCard(
-                          title: e.title,
-                          subtitle:
-                              '${_dowShortPt(e.startAt)} • ${_formatDayMonth(e.startAt)} • ${_formatTime(e.startAt)}',
-                          location: e.location,
-                          category: _categoryLabel(e.category),
-                          isInterested: liked,
-                          onHeartTap: () => _toggleInterest(e.id),
-                          onTap: () => _openDetails(e),
+                        return SizedBox(
+                          width: 300,
+                          child: Material(
+                            borderRadius: BorderRadius.circular(16),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () => _openDetails(e),
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: e.imageUrl != null
+                                        ? Image.network(
+                                            e.imageUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                _buildGradientFallback(),
+                                          )
+                                        : _buildGradientFallback(),
+                                  ),
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.black.withOpacity(0.2),
+                                            Colors.black.withOpacity(0.7),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned.fill(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            e.title,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            '${_dowShortPt(e.startAt)} • ${_formatTime(e.startAt)}',
+                                            style: const TextStyle(
+                                                color: Colors.white70),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 20),
                 ],
 
-                // ====== HEADER SEMANA ======
                 Row(
                   children: [
-                    Text('Próximos eventos', style: _sectionTitleStyle(context)),
+                    const Text(
+                      'Próximos eventos',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'Semana passada',
                       onPressed: _goPrevWeek,
-                      icon: const Icon(Icons.chevron_left_rounded),
+                      icon: const Icon(Icons.chevron_left),
                     ),
                     IconButton(
-                      tooltip: 'Próxima semana',
                       onPressed: _goNextWeek,
-                      icon: const Icon(Icons.chevron_right_rounded),
+                      icon: const Icon(Icons.chevron_right),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _rangeLabel(baseWeekStart, baseWeekEndInclusive),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ColorStyle.textoSecundario,
-                      ),
-                ),
+
+                Text(_rangeLabel(start, end)),
+
                 const SizedBox(height: 12),
 
-                // ====== LISTA DA SEMANA ======
-                if (weekEvents.isEmpty)
-                  _EmptyWeek(
-                    isCurrentWeek: _weekOffset == 0,
-                    onGoThisWeek: _goThisWeek,
-                    bg: _alpha(ColorStyle.fundoSuperficie, 0.60),
-                  )
-                else
-                  ...weekEvents.map((e) {
-                    final liked = _isInterested(e.id);
+                ...week.map((e) {
+                  final liked = _isInterested(e.id);
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _WeekEventCard(
-                        dow: _dowShortPt(e.startAt),
-                        day: e.startAt.day.toString().padLeft(2, '0'),
-                        title: e.title,
-                        time: _formatTime(e.startAt),
-                        location: e.location,
-                        category: _categoryLabel(e.category),
-                        bg: _alpha(ColorStyle.fundoSuperficie, 0.60),
-                        border: _alpha(ColorStyle.textoSecundario, 0.18),
-                        isInterested: liked,
-                        onHeartTap: () => _toggleInterest(e.id),
-                        onTap: () => _openDetails(e),
-                        isConfirmed: _confirmedIds.contains(e.id),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      tileColor: ColorStyle.fundoSuperficie,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    );
-                  }),
+                      title: Text(e.title),
+                      subtitle: Text(
+                        '${_dowShortPt(e.startAt)} • ${_formatTime(e.startAt)}',
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(
+                          liked ? Icons.favorite : Icons.favorite_border,
+                          color: liked ? Colors.red : null,
+                        ),
+                        onPressed: () => _toggleInterest(e.id),
+                      ),
+                      onTap: () => _openDetails(e),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -432,355 +395,24 @@ void _openDetails(AgendaEvent e) {
   }
 }
 
-// ======= resto do arquivo (cards/chips/empty) fica IGUAL ao seu =======
-
-class _FeaturedCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String location;
-  final String category;
-
-  final bool isInterested;
-  final VoidCallback onHeartTap;
-
-  final VoidCallback onTap;
-
-  const _FeaturedCard({
-    required this.title,
-    required this.subtitle,
-    required this.location,
-    required this.category,
-    required this.isInterested,
-    required this.onHeartTap,
-    required this.onTap,
-  });
-
-  Color _alpha(Color c, double opacity) {
-    final a = (opacity * 255).round().clamp(0, 255);
-    return c.withAlpha(a);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 300,
-      child: Material(
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Ink(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomLeft,
-                end: Alignment.topRight,
-                colors: [
-                  _alpha(ColorStyle.principal, 0.95),
-                  _alpha(ColorStyle.fundoSuperficie, 0.95),
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _Chip(
-                        text: category,
-                        bg: _alpha(ColorStyle.textoPrincipal, 0.14),
-                        border: _alpha(ColorStyle.textoPrincipal, 0.14),
-                        textColor: ColorStyle.textoPrincipal,
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: onHeartTap,
-                        icon: Icon(
-                          isInterested
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: isInterested
-                              ? ColorStyle.textoPrincipal
-                              : _alpha(ColorStyle.textoPrincipal, 0.80),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: ColorStyle.textoPrincipal,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _alpha(ColorStyle.textoPrincipal, 0.85),
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.place_rounded,
-                        size: 16,
-                        color: _alpha(ColorStyle.textoPrincipal, 0.85),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          location,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: _alpha(ColorStyle.textoPrincipal, 0.85),
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WeekEventCard extends StatelessWidget {
-  final String dow;
-  final String day;
-  final String title;
-  final String time;
-  final String location;
-  final String category;
-  final Color bg;
-  final Color border;
-
-  final bool isInterested;
-  final bool isConfirmed;
-  final VoidCallback onHeartTap;
-
-  final VoidCallback onTap;
-
-  const _WeekEventCard({
-    required this.dow,
-    required this.day,
-    required this.title,
-    required this.time,
-    required this.location,
-    required this.category,
-    required this.bg,
-    required this.border,
-    required this.isInterested,
-    required this.onHeartTap,
-    required this.onTap,
-    required this.isConfirmed
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      borderRadius: BorderRadius.circular(14),
-      clipBehavior: Clip.antiAlias,
-      color: bg,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: border),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 54,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        dow,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ColorStyle.textoSecundario,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                  if (isConfirmed)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Icon(
-                        Icons.verified_rounded,
-                        color: ColorStyle.principal,
-                        size: 20,
-                      ),
-                    ),
-                      IconButton(
-                            onPressed: onHeartTap,
-                            icon: Icon(
-                              isInterested
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: isInterested
-                                  ? ColorStyle.principal
-                                  : ColorStyle.textoSecundario,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            color: ColorStyle.textoSecundario,
-                          ),
-                      const SizedBox(height: 4),
-                      Text(
-                        day,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: ColorStyle.textoPrincipal,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: ColorStyle.textoPrincipal,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$time • $location',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ColorStyle.textoSecundario,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      _Chip(
-                        text: category,
-                        bg: Colors.transparent,
-                        border: border,
-                        textColor: ColorStyle.textoSecundario,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: onHeartTap,
-                  icon: Icon(
-                    isInterested
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    color: isInterested
-                        ? ColorStyle.principal
-                        : ColorStyle.textoSecundario,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: ColorStyle.textoSecundario,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  final String text;
-  final Color bg;
-  final Color border;
-  final Color textColor;
-
-  const _Chip({
-    required this.text,
-    required this.bg,
-    required this.border,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
-      ),
-    );
-  }
-}
-
-class _EmptyWeek extends StatelessWidget {
-  final bool isCurrentWeek;
-  final VoidCallback onGoThisWeek;
-  final Color bg;
-
-  const _EmptyWeek({
-    required this.isCurrentWeek,
-    required this.onGoThisWeek,
-    required this.bg,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Nenhum evento nesta semana.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: ColorStyle.textoPrincipal,
-                ),
-          ),
-          if (!isCurrentWeek) ...[
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: onGoThisWeek,
-              child: const Text('Voltar para semana atual'),
-            ),
-          ],
+// =========================
+// FALLBACK
+// =========================
+Widget _buildGradientFallback() {
+  return Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Color(0xFF0B0B0F),
+          Color(0xFF4A148C),
+          Color(0xFF7B1FA2),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+class _AgendaCache {
+  final List<AgendaEvent> events;
+  _AgendaCache(this.events);
 }

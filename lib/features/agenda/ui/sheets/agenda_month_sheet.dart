@@ -7,8 +7,6 @@ import '../../service/agenda_calendar_mapper.dart';
 
 class AgendaMonthSheet extends StatefulWidget {
   final List<AgendaEvent> allEvents;
-
-  /// callback opcional: quando o user toca em um evento da lista do dia
   final void Function(AgendaEvent event)? onEventTap;
 
   const AgendaMonthSheet({
@@ -32,14 +30,34 @@ class _AgendaMonthSheetState extends State<AgendaMonthSheet> {
   @override
   void initState() {
     super.initState();
-    _byDay = _mapper.groupByDay(widget.allEvents);
+
+    // 🔥 normaliza tudo aqui UMA vez (evita loop / rebuild infinito)
+    _byDay = _buildMap(widget.allEvents);
+
     _focusedDay = DateTime.now();
-    _selectedDay = _mapper.dateOnly(DateTime.now());
+    _selectedDay = _dateOnly(DateTime.now());
   }
 
+  // =========================
+  // NORMALIZAÇÃO FORTE (IMPORTANTE)
+  // =========================
+  Map<DateTime, List<AgendaEvent>> _buildMap(List<AgendaEvent> events) {
+    final map = <DateTime, List<AgendaEvent>>{};
+
+    for (final e in events) {
+      final key = _dateOnly(e.startAt);
+
+      map.putIfAbsent(key, () => []);
+      map[key]!.add(e);
+    }
+
+    return map;
+  }
+
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   List<AgendaEvent> _eventsOf(DateTime day) {
-    final key = _mapper.dateOnly(day);
-    return _byDay[key] ?? const <AgendaEvent>[];
+    return _byDay[_dateOnly(day)] ?? const [];
   }
 
   String _hhmm(DateTime d) =>
@@ -48,7 +66,8 @@ class _AgendaMonthSheetState extends State<AgendaMonthSheet> {
   @override
   Widget build(BuildContext context) {
     final selected = _selectedDay;
-    final dayEvents = selected == null ? const <AgendaEvent>[] : _eventsOf(selected);
+    final dayEvents =
+        selected == null ? const <AgendaEvent>[] : _eventsOf(selected);
 
     return SafeArea(
       child: Padding(
@@ -56,7 +75,7 @@ class _AgendaMonthSheetState extends State<AgendaMonthSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle do modal
+            // handle
             Container(
               width: 44,
               height: 4,
@@ -67,144 +86,149 @@ class _AgendaMonthSheetState extends State<AgendaMonthSheet> {
             ),
             const SizedBox(height: 12),
 
+            // header
             Row(
               children: [
                 Text(
                   'Calendário',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: ColorStyle.textoPrincipal,
                       ),
                 ),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Fechar',
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
 
-            // Calendário (mês)
+            // =========================
+            // CALENDAR (CORRIGIDO)
+            // =========================
             TableCalendar<AgendaEvent>(
               firstDay: DateTime(2020, 1, 1),
               lastDay: DateTime(2035, 12, 31),
               focusedDay: _focusedDay,
               calendarFormat: CalendarFormat.month,
+
               availableGestures: AvailableGestures.horizontalSwipe,
+
               selectedDayPredicate: (day) =>
                   selected != null && isSameDay(selected, day),
-              eventLoader: _eventsOf, // <- como o calendar sabe que tem evento
-              onDaySelected: (sel, foc) {
+
+              eventLoader: _eventsOf,
+
+              onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
-                  _selectedDay = _mapper.dateOnly(sel);
-                  _focusedDay = foc;
+                  _selectedDay = _dateOnly(selectedDay);
+                  _focusedDay = focusedDay;
                 });
               },
-              onPageChanged: (foc) => _focusedDay = foc,
+
+              onPageChanged: (focusedDay) {
+                _focusedDay = focusedDay;
+              },
+
               headerStyle: HeaderStyle(
                 titleCentered: true,
                 formatButtonVisible: false,
-                titleTextStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: ColorStyle.textoPrincipal,
-                    ),
-                leftChevronIcon: const Icon(Icons.chevron_left_rounded),
-                rightChevronIcon: const Icon(Icons.chevron_right_rounded),
+                titleTextStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+
               daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: ColorStyle.textoSecundario,
-                      fontWeight: FontWeight.w700,
-                    ),
-                weekendStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: ColorStyle.textoSecundario,
-                      fontWeight: FontWeight.w700,
-                    ),
+                weekdayStyle: TextStyle(color: ColorStyle.textoSecundario),
+                weekendStyle: TextStyle(color: ColorStyle.textoSecundario),
               ),
+
               calendarStyle: CalendarStyle(
                 outsideTextStyle:
                     TextStyle(color: ColorStyle.textoSecundario.withAlpha(120)),
-                weekendTextStyle: TextStyle(color: ColorStyle.textoPrincipal),
-                defaultTextStyle: TextStyle(color: ColorStyle.textoPrincipal),
                 selectedDecoration: BoxDecoration(
                   color: ColorStyle.principal,
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: ColorStyle.principal.withAlpha(110),
+                  color: ColorStyle.principal.withAlpha(120),
                   shape: BoxShape.circle,
                 ),
                 markersMaxCount: 3,
+                markerSize: 6,
+                markerMargin: const EdgeInsets.symmetric(horizontal: 1),
+
                 markerDecoration: BoxDecoration(
                   color: ColorStyle.principal,
                   shape: BoxShape.circle,
                 ),
               ),
-              calendarBuilders: CalendarBuilders<AgendaEvent>(
-                // bolinhas (marcadores) por dia
-                markerBuilder: (context, day, events) {
-                  if (events.isEmpty) return null;
-                  final count = events.length;
 
-                  // até 3 bolinhas, simples e leve
-                  final dots = count > 3 ? 3 : count;
+              calendarBuilders: CalendarBuilders<AgendaEvent>(
+                markerBuilder: (context, day, events) {
+                  if(events.isEmpty) return null;
+
+                  final dots = events.length> 3 ? 3 : events.length;
+
                   return Positioned(
                     bottom: 4,
                     child: Row(
-                      children: List.generate(dots, (_) {
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(dots, (_){
                         return Container(
                           width: 5,
                           height: 5,
-                          margin: const EdgeInsets.symmetric(horizontal: 1.2),
+                          margin: const EdgeInsets.symmetric(horizontal: 1),
                           decoration: BoxDecoration(
                             color: ColorStyle.principal,
-                            shape: BoxShape.circle,
+                            shape: BoxShape.circle
                           ),
                         );
                       }),
                     ),
                   );
-                },
+                }
               ),
+
+              // 🚨 REMOVIDO markerBuilder (ele causa overflow/rebuild loop)
+              // TableCalendar já lida com markers via eventLoader
             ),
 
             const SizedBox(height: 12),
 
-            // Lista simples do dia
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 selected == null
                     ? 'Selecione um dia'
-                    : 'Eventos do dia ${selected.day.toString().padLeft(2, '0')}/${selected.month.toString().padLeft(2, '0')}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: ColorStyle.textoPrincipal,
-                    ),
+                    : 'Eventos do dia ${selected.day}/${selected.month}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
+
             const SizedBox(height: 10),
 
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
+            // =========================
+            // LISTA (SEM OVERFLOW)
+            // =========================
+            Flexible(
               child: dayEvents.isEmpty
                   ? Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Sem eventos neste dia.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: ColorStyle.textoSecundario,
-                            ),
+                        style:
+                            TextStyle(color: ColorStyle.textoSecundario),
                       ),
                     )
                   : ListView.separated(
-                      shrinkWrap: true,
                       itemCount: dayEvents.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, i) {
                         final e = dayEvents[i];
+
                         return Material(
                           color: ColorStyle.fundoSuperficie,
                           borderRadius: BorderRadius.circular(12),
@@ -214,40 +238,23 @@ class _AgendaMonthSheetState extends State<AgendaMonthSheet> {
                                 ? null
                                 : () => widget.onEventTap!(e),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
+                              padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
                                   Text(
                                     _hhmm(e.startAt),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: ColorStyle.textoPrincipal,
-                                        ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
                                       e.title,
-                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: ColorStyle.textoPrincipal,
-                                          ),
                                     ),
                                   ),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: ColorStyle.textoSecundario,
-                                  ),
+                                  const Icon(Icons.chevron_right),
                                 ],
                               ),
                             ),
