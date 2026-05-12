@@ -1,16 +1,82 @@
-# flutter_application_1
+# ADESP APP
 
-A new Flutter project.
+Aplicativo mobile desenvolvido para a igreja ADESP, com foco em comunicação, organização e integração entre membros, liderança e secretaria.
 
-## Getting Started
+O projeto foi criado com o objetivo de modernizar processos internos da igreja através de uma plataforma intuitiva, escalável e de fácil utilização.
 
-This project is a starting point for a Flutter application.
+## Funcionalidades
 
-A few resources to get you started if this is your first Flutter project:
+- Login e autenticação de usuários
+- Cadastro de membros
+- Atualização de perfil
+- Navegação intuitiva
+- Integração com API REST
+- Sistema de gerenciamento de dados
+- Área administrativa
+- Persistência de dados com PostgreSQL
+- Estrutura escalável para futuras funcionalidades
+- Agendamento de Gabinetes
+- Agenda interativa da programação da igreja
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Tecnologias Utilizadas
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Front-End
+- Flutter
+- Dart
+
+### Back-End
+- Node.js
+- Express.js
+
+### Banco de Dados
+- PostgreSQL
+
+### Ferramentas
+- Git
+- GitHub
+- Figma
+- Postman
+
+## Arquitetura
+
+O projeto segue uma arquitetura modular, separando responsabilidades entre interface, regras de negócio, serviços e persistência de dados.
+
+Estrutura baseada em:
+- Controllers
+- Services
+- Routes
+- Models
+- Components
+
+## Como Executar
+
+### Clone o repositório
+
+```bash
+git clone URL_DO_REPOSITORIO
+
+### Instale as dependências
+
+flutter pub get
+npm install
+
+### Execute o projeto
+
+flutter run
+
+```md
+## Status do Projeto
+
+🚧 Em desenvolvimento
+
+## Preview
+
+Em Breve
+
+## Objetivo
+
+Além de atender às necessidades da igreja ADESP, o projeto também faz parte do meu processo de evolução profissional como desenvolvedor mobile e back-end.
+
+## Licença
+
+Projeto desenvolvido para fins institucionais e educacionais.
