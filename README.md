@@ -4,6 +4,8 @@ Aplicativo mobile desenvolvido para a igreja ADESP, com foco em comunicação, o
 
 O projeto foi criado com o objetivo de modernizar processos internos da igreja através de uma plataforma intuitiva, escalável e de fácil utilização.
 
+---
+
 ## Funcionalidades
 
 - Login e autenticação de usuários
@@ -15,8 +17,10 @@ O projeto foi criado com o objetivo de modernizar processos internos da igreja a
 - Área administrativa
 - Persistência de dados com PostgreSQL
 - Estrutura escalável para futuras funcionalidades
-- Agendamento de Gabinetes
+- Agendamento de gabinetes
 - Agenda interativa da programação da igreja
+
+---
 
 ## Tecnologias Utilizadas
 
@@ -37,16 +41,21 @@ O projeto foi criado com o objetivo de modernizar processos internos da igreja a
 - Figma
 - Postman
 
+---
+
 ## Arquitetura
 
 O projeto segue uma arquitetura modular, separando responsabilidades entre interface, regras de negócio, serviços e persistência de dados.
 
 Estrutura baseada em:
+
 - Controllers
 - Services
 - Routes
 - Models
 - Components
+
+---
 
 ## Como Executar
 
@@ -54,28 +63,44 @@ Estrutura baseada em:
 
 ```bash
 git clone URL_DO_REPOSITORIO
+```
 
 ### Instale as dependências
 
+```bash
 flutter pub get
 npm install
+```
 
 ### Execute o projeto
 
+```bash
 flutter run
+```
 
+---
 ```md
 ## Status do Projeto
 
 🚧 Em desenvolvimento
+```
+---
 
 ## Preview
 
-Em Breve
+<p align="center">
+  <img src="./assets/readme/home.png" width="250"/>
+  <img src="./assets/readme/login.png" width="250"/>
+  <img src="./assets/readme/profile.png" width="250"/>
+</p>
+
+---
 
 ## Objetivo
 
 Além de atender às necessidades da igreja ADESP, o projeto também faz parte do meu processo de evolução profissional como desenvolvedor mobile e back-end.
+
+---
 
 ## Licença
 
